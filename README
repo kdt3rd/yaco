@@ -7,10 +7,10 @@ library
 
 collection of utility classes that add to the core stl / std / tr1 library system.
 
-This is designed to add to c++0x, and leverage the language and library features added in this newest revision of C++.
+This is designed to add to c++11, and leverage the language and library features added in this newest revision of C++.
 
 Features:
-- stream i/o and stream buffer additions to enable additional features for i/o
-- miscellaneous string functions
-- basic encapsulation of some O.S. dependent functions
+- [future] stream i/o and stream buffer additions to enable additional features for i/o
+- [future] miscellaneous string functions
+- [future] basic encapsulation of some O.S. dependent functions
 - code constructs for "better" coding style and improved code reliability
