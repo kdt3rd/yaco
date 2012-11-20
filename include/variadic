@@ -69,6 +69,7 @@ template <typename R, typename... FuncArgs, typename... Args>
 R
 call_func_from_tuple( const std::function<R (FuncArgs...)> &f, const std::tuple<Args...> &args )
 {
+	static_assert( sizeof...(FuncArgs) == sizeof...(Args), "Mis-match of function argument count to arguments provided" );
 	return __dispatch_help( f, args, typename gen_sequence<sizeof...(Args)>::type() );
 }
 
