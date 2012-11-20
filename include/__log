@@ -1,0 +1,115 @@
+/// -*- mode: C++ -*-
+///
+/// @file log
+///
+/// @author Kimball Thurston
+
+//
+// Copyright (c) 2012 Kimball Thurston
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+// OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+
+#pragma once
+
+#include <tuple>
+#include <locale>
+#include <sstream>
+
+namespace yaco
+{
+
+namespace __priv
+{
+
+template <size_t I, size_t N>
+struct log_arg : public log_arg<I + 1, N - 1>
+{
+	typedef log_arg<I + 1, N - 1> base;
+	template <typename T>
+	static void output( std::ostream &os, size_t x, const T &args )
+	{
+		if ( x == I )
+		{
+			os << std::get<I>( args );
+			return;
+		}
+		base::output( os, x, args );
+	}
+};
+
+template <size_t I>
+struct log_arg<I, 1>
+{
+	template <typename T>
+	static void output( std::ostream &os, size_t x, const T &args )
+	{
+		if ( x == I )
+		{
+			os << std::get<I>( args );
+			return;
+		}
+		throw std::runtime_error( "Invalid log format string: out of range position indicator (missing arguments)" );
+	}
+};
+
+template <size_t I>
+struct log_arg<I, 0>
+{
+	template <typename T>
+	static void output( std::ostream &os, size_t x, const T &args )
+	{
+		throw std::runtime_error( "Invalid log format string: out of range position indicator (missing arguments)" );
+	}
+};
+
+template <typename T>
+void
+log_build( std::ostream &os, const char *s, const T &args )
+{
+	while ( *s )
+	{
+		if ( *s == '%' )
+		{
+			++s;
+			if ( ! std::isdigit( *s ) )
+				throw std::runtime_error( "Invalid log format string: expecting position indicator" );
+
+			size_t n = 0;
+
+			while ( *s && std::isdigit( *s ) )
+			{
+				n *= 10;
+				n += ( *s - '0' );
+				++s;
+			}
+			log_arg<0, std::tuple_size<T>::value, const T &>::output( os, n, args );
+		}
+		else
+		{
+			os << *s++;
+		}
+	}
+}
+
+void log_output( const std::string &msg );
+
+} // namespace __priv
+
+} // namespace yaco
