@@ -2,7 +2,7 @@
 
 trap "echo Exiting..." SIGINT SIGTERM
 
-declare -a BUILD_FILES=($(realpath $0))
+declare -a BUILD_FILES=($(readlink -f $0))
 readonly TOP_SOURCE_DIR=$(dirname ${BUILD_FILES[0]})
 readonly SYSTEM=$(uname -s)
 readonly ARCH=$(uname -m)
