@@ -1,0 +1,239 @@
+/// -*- mode: C++ -*-
+///
+/// @file log
+///
+/// @author Kimball Thurston
+
+//
+// Copyright (c) 2012 Kimball Thurston
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+// OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+
+#pragma once
+
+#include <vector>
+#include <string>
+#include <sstream>
+#include <locale>
+#include <algorithm>
+
+#include "__fmt"
+
+namespace yaco
+{
+
+// a collection of string utilities...
+namespace str
+{
+
+template <class charT, typename... Args >
+std::basic_string<charT>
+format( const charT *__fmt, const Args&... args )
+{
+	std::basic_stringstream<charT> __tmp;
+	__priv::fmt_build( __tmp, __fmt, std::tie(args...) );
+	return __tmp.str();
+}
+
+template <typename charT, typename fmtCharT, typename... Args >
+void
+format( std::basic_ostream<charT> &__os, const fmtCharT *__fmt, const Args&... args )
+{
+	__priv::fmt_build( __os, __fmt, std::tie(args...) );
+}
+
+template <class charT, class traitsT, class allocT>
+std::vector<std::basic_string<charT, traitsT, allocT>>
+split( const std::basic_string<charT, traitsT, allocT> &__str,
+	   const std::basic_string<charT, traitsT, allocT> &__sep,
+	   bool __skip_empty = false )
+{
+	typedef typename std::basic_string<charT, traitsT, allocT> __s_type;
+
+	std::vector< __s_type > __ret;
+
+	if ( __skip_empty )
+	{
+		__s_type::size_type __last = __str.find_first_not_of( __sep, 0 );
+		__s_type::size_type __cur = __str.find_first_of( __sep, __last );
+		
+		while ( __cur != __stype::npos || __last != __stype::npos )
+		{
+			if ( __cur != __last )
+				__ret.push_back( __str.substr( __last, __cur - __last ) );
+			__last = __str.find_first_not_of( __sep, __cur );
+			__cur = __str.find_first_of( __sep, __last );
+		}
+	}
+	else
+	{
+		__s_type::size_type __last = 0;
+		__s_type::size_type __cur = __str.find_first_of( __sep, __last );
+
+		do
+		{
+			if ( __cur == __s_type::npos )
+			{
+				if ( __last == __str.size() )
+					__ret.push_back( __stype() );
+				else
+					__ret.push_back( __str.substr( __last ) );
+				break;
+			}
+			else
+				__ret.push_back( __str.substr( __last, __cur - __last ) );
+
+			__last = __cur + 1;
+			__cur = __str.find_first_of( __sep, __last );
+		} while ( __last != __s_type::npos );
+	}
+
+	return __ret;
+}
+
+template <typename charT, traitsT, allocT>
+std::vector<std::basic_string<charT, traitsT, allocT>>
+split( const std::basic_string<charT, traitsT, allocT> &__str,
+	   traitsT::char_type __sep,
+	   bool __skip_empty = false )
+{
+	typedef typename std::basic_string<charT, traitsT, allocT> __s_type;
+
+	std::vector< __s_type > __ret;
+
+	if ( __skip_empty )
+	{
+		__s_type::size_type __last = __str.find_first_not_of( __sep, 0 );
+		__s_type::size_type __cur = __str.find_first_of( __sep, __last );
+		
+		while ( __cur != __stype::npos || __last != __stype::npos )
+		{
+			if ( __cur != __last )
+				__ret.push_back( __str.substr( __last, __cur - __last ) );
+			__last = __str.find_first_not_of( __sep, __cur );
+			__cur = __str.find_first_of( __sep, __last );
+		}
+	}
+	else
+	{
+		__s_type::size_type __last = 0;
+		__s_type::size_type __cur = __str.find_first_of( __sep, __last );
+
+		do
+		{
+			if ( __cur == __s_type::npos )
+			{
+				if ( __last == __str.size() )
+					__ret.push_back( __stype() );
+				else
+					__ret.push_back( __str.substr( __last ) );
+				break;
+			}
+			else
+				__ret.push_back( __str.substr( __last, __cur - __last ) );
+
+			__last = __cur + 1;
+			__cur = __str.find_first_of( __sep, __last );
+		} while ( __last != __s_type::npos );
+	}
+
+	return __ret;
+}
+
+template <typename charT, traitsT, allocT>
+int
+icompare( const std::basic_string<charT, traitsT, allocT> &__a,
+		  const std::basic_string<charT, traitsT, allocT> &__b )
+{
+//	typedef typename std::basic_string<charT, traitsT, allocT> __s_type;
+//	auto &__f = std::use_facet<std::collate<charT>>( std::locale() );
+//  the above facet can be used w/ the transform function to enable
+//	true lexicographical compare, otherwise it'll just be comparing
+//	the lower case versions
+
+	size_t __lhs = __a.size();
+    size_t __rhs = __b.size();
+	std::locale __l;
+
+	const charT *__aP = __a.data();
+	const charT *__bP = __b.data();
+	for ( size_t __n = std::min( __lhs, __rhs ); __n; --__n, ++__aP, ++__bP )
+	{
+		charT __aI = std::tolower( *__aP, __l );
+		charT __bI = std::tolower( *__bP, __l );
+		if ( traitsT::lt( __aI, __bI ) )
+			return -1;
+		if ( traitsT::lt( __bI, __aI ) )
+			return 1;
+	}
+
+	if ( __lhs < __rhs )
+		return -1;
+
+	if ( __lhs > __rhs )
+		return 1;
+
+	return 0;
+}
+
+template <typename charT, traitsT, allocT>
+bool
+iless( const std::basic_string<charT, traitsT, allocT> &__a,
+	   const std::basic_string<charT, traitsT, allocT> &__b )
+{
+	return icompare( __a, __b ) < 0;
+}
+
+template <typename charT, traitsT, allocT>
+std::basic_string<charT, traitsT, allocT>
+to_lower( const std::basic_string<charT, traitsT, allocT> &__str,
+		  const std::locale &__l)
+{
+	return transform( __str.begin(), __str.end(), __str.begin(),
+					  std::bind( std::tolower, std::placeholders::_1, __l ) );
+}
+
+template <typename charT, traitsT, allocT>
+std::basic_string<charT, traitsT, allocT>
+to_lower( const std::basic_string<charT, traitsT, allocT> &__str )
+{
+	return to_lower( __str, std::locale() );
+}
+
+template <typename charT, traitsT, allocT>
+std::basic_string<charT, traitsT, allocT>
+to_upper( const std::basic_string<charT, traitsT, allocT> &__str,
+		  const std::locale &__l)
+{
+	return transform( __str.begin(), __str.end(), __str.begin(),
+					  std::bind( std::toupper, std::placeholders::_1, __l ) );
+}
+
+template <typename charT, traitsT, allocT>
+std::basic_string<charT, traitsT, allocT>
+to_upper( const std::basic_string<charT, traitsT, allocT> &__str )
+{
+	return to_upper( __str, std::locale() );
+}
+
+} // namespace str
+
+} // namespace yaco
+

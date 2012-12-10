@@ -74,7 +74,7 @@ log( log_type level, const char *fmt, const Args&... args )
 	{
 		std::stringstream s;
 		s << __priv::get_log_prefix( level );
-		__priv::log_build( s, fmt, std::tie(args...) );
+		__priv::fmt_build( s, fmt, std::tie(args...) );
 		__priv::log_output( s.str() );
 	}
 }
