@@ -1,0 +1,52 @@
+# -*- mode: Shell-script -*-
+# Initialize the types of builds we want
+
+# This is the default, but we could set it elsewhere
+# NB: If given as a relative path, may not work...
+# OutputRoot ${TOP_SOURCE_DIR}
+
+# Override the default build file emitter style
+# SetEmitter ninja
+
+# offer 3 different configurations
+
+BuildType debug Debug
+BuildType build Build
+BuildType release Release
+
+DefaultBuildType build
+
+# turns on c and c++ compile things
+# Module cpp
+# can specify options, like which compiler to use, like this:
+Module cpp COMPILER clang
+
+LibraryConfig static
+#LibraryConfig shared
+
+# set the global warnings we care about
+Warnings everything no-thread-safety no-padded no-unused-parameter no-c++98-compat-pedantic no-shorten-64-to-32 no-packed no-conversion no-sign-conversion no-disabled-macro-expansion no-global-constructors no-exit-time-destructors no-float-equal
+# no-documentation-deprecated-sync
+
+if Building debug; then
+CFlags -ggdb -fvar-tracking-uninit -fbounds-check -fcheck-data-deps
+CXXFlags -ggdb -fvar-tracking-uninit -fbounds-check -fcheck-data-deps
+fi
+
+if Building build; then
+CFlags -O3
+CXXFlags -O3
+Definitions NDEBUG
+fi
+
+if Building release; then
+CFlags -O3
+CXXFlags -O3
+Definitions NDEBUG RELEASE_MODE
+fi
+
+Definitions __STDC_LIMIT_MACROS _FILE_OFFSET_BITS=64
+
+Executable Test foo.cpp
+
+SubDir src

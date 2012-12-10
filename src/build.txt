@@ -1,0 +1,2 @@
+SubDir test
+LocalVar xx bar

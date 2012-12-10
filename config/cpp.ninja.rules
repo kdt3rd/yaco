@@ -1,0 +1,9 @@
+
+rule cxx
+  command = $cxx $cxxflags $incdirs $extra_incs -MMD -MF $out.d -c $in -o $out
+  description = C++ ($in)
+  depfile = $out.d
+
+rule exe
+  command = $ld $rpath $ldflags $in $libs -o $out $io_redirect
+  description = Linking ($out)

@@ -1,0 +1,113 @@
+# -*- mode: Shell-script -*-
+#
+# C / C++ rules
+#
+
+Module compile
+
+CompileAddExtensions c o cc cpp o cxx cc o cxx C o cxx
+CompileAddDependOnlyExtensions h hxx H
+
+ModuleScopedArrays CFLAGS CXXFLAGS DEFINITIONS WARNINGS
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		COMPILER)
+			shift
+			case "$1" in
+				gcc)
+					DefineExecutable c gcc
+					DefineExecutable cxx g++
+					DefineExecutable ld g++
+					DefineExecutable ar ar
+					;;
+				clang)
+					DefineExecutable c clang
+					DefineExecutable cxx clang++
+					DefineExecutable ld clang++
+					DefineExecutable ar ar
+					;;
+				*)
+					echo "ERROR: Unconfigured compiler name '$1', please add configuration to cpp_rules"
+					return 1
+					;;
+			esac
+			;;
+		*)
+			echo "ERROR: Unknown cpp_rules option '$1'"
+			return 1
+			;;
+	esac
+
+	shift
+done
+
+function __cpp_emit_ninja_setup
+{
+	local __nFile=$1
+
+	if [ ${#DEFINITIONS[@]} -gt 0 ]
+	then
+		echo "cflags = \$cflags ${DEFINITIONS[@]/#/-D}" >> $__nFile
+		echo "cxxflags = \$cxxflags ${DEFINITIONS[@]/#/-D}" >> $__nFile
+	fi
+	if [ ${#WARNINGS[@]} -gt 0 ]
+	then
+		echo "cflags = \$cflags ${WARNINGS[@]/#/-W}" >> $__nFile
+		echo "cxxflags = \$cxxflags ${WARNINGS[@]/#/-W}" >> $__nFile
+	fi
+	if [ ${#CFLAGS[@]} -gt 0 ]
+	then
+		echo "cflags = \$cflags ${CFLAGS[@]}" >> $__nFile
+	fi
+	if [ ${#CXXFLAGS[@]} -gt 0 ]
+	then
+		echo "cxxflags = \$cxxflags ${CXXFLAGS[@]}" >> $__nFile
+	fi
+}
+
+function __CPP_EmitterSetup
+{
+	case $EMITTER_STYLE in
+		ninja)
+			__cpp_emit_ninja_setup "$@"
+			;;
+		*)
+			echo "ERROR: Unknown emitter style for CPP rules"
+			exit 1
+			;;
+	esac
+}
+
+ModuleEmitterSetupFunc __CPP_EmitterSetup
+
+function __CPP_TopLevel
+{
+	if [ "$EMITTER_STYLE" == "ninja" ]; then
+		AddRuleFile config/cpp.ninja.rules
+	fi
+}
+
+ModuleTopLevelFunc __CPP_TopLevel
+
+function CFlags
+{
+	CFLAGS+=("$@")
+}
+
+function CXXFlags
+{
+	CXXFLAGS+=("$@")
+}
+
+function Definitions
+{
+	DEFINITIONS+=("$@")
+}
+
+function Warnings
+{
+	WARNINGS+=("$@")
+}
+
+return 0

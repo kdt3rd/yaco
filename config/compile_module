@@ -1,0 +1,231 @@
+# -*- mode: Shell-script -*-
+
+# Generic rules for compiling code
+#
+
+declare -A __COMPILE_COMPILED_EXTENSIONS
+declare -A __COMPILE_BUILD_RULE
+declare -A __COMPILE_DEPEND_ONLY_EXTENSIONS
+declare -A __COMPILE_PASS_EXTENSIONS
+declare __COMPILE_LIBRARY_CONFIG=static
+declare __COMPILE_TARGET_IDX=0
+
+function LibraryConfig
+{
+	__COMPILE_LIBRARY_CONFIG=$1
+}
+
+function CompileAddExtensions
+{
+	while [ $# -gt 0 ]; do
+		local __srcExt=$1
+		local __outExt=$2
+		local __ruleType=$3
+		shift
+		shift
+		shift
+		if [ "$__outExt" == "" -o "$__ruleType" == "" ]
+		then
+			echo "ERROR: CompileAddExtensions expects a tuple of arguments (srcext, outext, ruletype)"
+			exit 1
+		fi
+		__COMPILE_COMPILED_EXTENSIONS[$__srcExt]=$__outExt
+		__COMPILE_BUILD_RULE[$__srcExt]=$__ruleType
+	done
+}
+
+function CompileAddDependOnlyExtensions
+{
+	while [ $# -gt 0 ]; do
+		__COMPILE_DEPEND_ONLY_EXTENSIONS[$1]=t
+		shift
+	done
+}
+
+function CompileAddPassExtensions
+{
+	while [ $# -gt 0 ]; do
+		__COMPILE_PASS_EXTENSIONS[$1]=t
+		shift
+	done
+}
+
+CompileAddPassExtensions o
+ModuleScopedArrays COMPILE_TARGETS
+
+function __addTarget
+{
+	let __COMPILE_TARGET_IDX++
+	local targVarName=__COMPILE_TARG_${__COMPILE_TARGET_IDX}
+	eval declare -A -g $targVarName
+	TARGET_INFO["$2"]=$targVarName
+	eval $1=$targVarName
+}
+
+declare __COMPILE_DEP_IDX=0
+function __addDepArray
+{
+	let __COMPILE_DEP_IDX++
+	local targVarName=__COMPILE_DEP_${__COMPILE_DEP_IDX}
+	eval declare -a -g $targVarName
+	eval $1=$targVarName
+}
+
+function __addCompileTargets
+{
+	local __targVar=$1
+	shift
+
+	local __targDep="${__targVar}[dep]"
+	local __targTDep="${__targVar}[targdep]"
+	local __targCDep="${__targVar}[cdep]"
+
+	local __targDepArr
+	local __targTDepArr
+	local __targCDepArr
+	__addDepArray __targDepArr
+	__addDepArray __targTDepArr
+	__addDepArray __targCDepArr
+
+	eval ${__targDep}=${__targDepArr}
+	eval ${__targTDep}=${__targTDepArr}
+	eval ${__targCDep}=${__targCDepArr}
+
+	for __curF in "$@"
+	do
+		if [ ${TARGET_INFO[$__curF]+_} ]
+		then
+			eval ${__targTDepArr}+=\( ${__curF} \)
+			continue
+		fi
+
+		local __ext=${__curF##*.}
+		local __srcFN=${CURRENT_SOURCE_PATH}$__curF
+
+		if [ ${__COMPILE_COMPILED_EXTENSIONS[$__ext]+_} ]; then
+			local __compFile=${__curF%.*}.${__COMPILE_COMPILED_EXTENSIONS[$__ext]}
+
+			local __ctargInfo
+			__addTarget __ctargInfo "$__compFile"
+
+			local __ctargDep="${__ctargInfo}[dep]"
+			local __ctargRule="${__ctargInfo}[rule]"
+			local __ctargOut="${__ctargInfo}[out]"
+
+			local __ctargDepArr
+			__addDepArray __ctargDepArr
+
+			eval ${__ctargDep}="${__ctargDepArr}"
+			eval ${__ctargRule}="${__COMPILE_BUILD_RULE[$__ext]}"
+			eval ${__ctargOut}="${__compFile}"
+
+			eval ${__ctargDepArr}+=\( ${__srcFN} \)
+			eval ${__targCDepArr}+=\( ${__compFile} \)
+
+			COMPILE_TARGETS+=("${__ctargInfo}")
+			continue
+		fi
+
+		if [ ${DEPEND_ONLY_EXTENSIONS[$__ext]+_} ]; then
+			eval ${__targDepArr}+=\( ${__srcFN} \)
+			continue
+		fi
+
+		if [ ${PASS_EXTENSIONS[$__ext]+_} ]; then
+			eval ${__targCDepArr}+=\( ${__curF} \)
+			continue
+		fi
+
+		echo "ERROR: No rule for compiling $__curF defined"
+		exit 1
+	done
+}
+
+function Executable
+{
+	local __exeName=$1
+	shift
+
+	local __targVar
+	__addTarget __targVar $__exeName
+
+	eval ${__targVar}[meta]="$__exeName"
+	eval ${__targVar}[rule]="exe"
+	eval ${__targVar}[out]="${__exeName}"
+	eval ${__targVar}[always]="t"
+
+	__addCompileTargets "${__targVar}" "$@"
+
+	COMPILE_TARGETS+=("${__targVar}")
+}
+
+function __compile_emit_ninja_targets
+{
+	local __nFile=$1
+
+	if [ ${#COMPILE_TARGETS[@]} -gt 0 ]
+	then
+		local __t
+		for __t in "${!COMPILE_TARGETS[@]}"
+		do
+			local __tV=${COMPILE_TARGETS[$__t]}
+			local __tMeta __tRule __tOut __tDep __tCDep __tTDep
+			__tMeta="${__tV}[meta]"
+			__tAlways="${__tV}[always]"
+			__tRule="${__tV}[rule]"
+			__tOut="${__tV}[out]"
+			__tDep="${__tV}[dep]"
+			__tCDep="${__tV}[cdep]"
+			__tTDep="${__tV}[targdep]"
+
+			local __tFullOut=${CURRENT_BINARY_DIR}${!__tOut}
+			if [ "${!__tMeta}" != "" ]
+			then
+				ALL_TARGETS+=( "${!__tMeta}" )
+				echo "build ${!__tMeta}: phony ${__tFullOut}" >> $__nFile
+				if [ "${!__tAlways}" == "t" ]; then
+					echo "default ${!__tMeta}" >> $__nFile
+				fi
+			fi
+			unset __tmp_expDeps
+			unset __tmp_impDeps
+			local -a __tmp_expDeps
+			local -a __tmp_impDeps
+			if [ "${!__tDep}" != "" ]; then
+				__tDep="${!__tDep}[@]"
+				__tmp_expDeps+=( ${!__tDep} )
+			fi
+			if [ "${!__tCDep}" != "" ]; then
+				__tCDep="${!__tCDep}[@]"
+				__tmp_expDeps+=( ${!__tCDep/#/${CURRENT_BINARY_DIR}} )
+			fi
+			if [ "${!__tTDep}" != "" ]; then
+				__tTDep="${!__tTDep}[@]"
+				__tmp_impDeps+=( ${!__tTDep} )
+			fi
+
+			if [ ${#__tmp__impDeps[@]} -gt 0 ]; then
+				echo "build ${CURRENT_BINARY_DIR}${!__tOut}: ${!__tRule} ${__tmp_expDeps[@]} | ${__tmp_impDeps[@]}" >> $__nFile
+			else
+				echo "build ${CURRENT_BINARY_DIR}${!__tOut}: ${!__tRule} ${__tmp_expDeps[@]}" >> $__nFile
+			fi
+		done
+	fi
+}
+
+function __Compile_EmitTargets
+{
+	case $EMITTER_STYLE in
+		ninja)
+			__compile_emit_ninja_targets "$@"
+			;;
+		*)
+			echo "ERROR: Unknown emitter style for compile rules"
+			exit 1
+			;;
+	esac
+}
+
+ModuleEmitterTargetFunc __Compile_EmitTargets
+
+return 0
