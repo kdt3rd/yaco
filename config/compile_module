@@ -3,17 +3,12 @@
 # Generic rules for compiling code
 #
 
-declare -A __COMPILE_COMPILED_EXTENSIONS
-declare -A __COMPILE_BUILD_RULE
-declare -A __COMPILE_DEPEND_ONLY_EXTENSIONS
-declare -A __COMPILE_PASS_EXTENSIONS
-declare __COMPILE_LIBRARY_CONFIG=static
-declare __COMPILE_TARGET_IDX=0
-
-function LibraryConfig
-{
-	__COMPILE_LIBRARY_CONFIG=$1
-}
+declare -A -g __COMPILE_COMPILED_EXTENSIONS
+declare -A -g __COMPILE_BUILD_RULE
+declare -A -g __COMPILE_DEPEND_ONLY_EXTENSIONS
+declare -A -g __COMPILE_PASS_EXTENSIONS
+declare -g __COMPILE_TARGET_IDX=0
+declare -g __COMPILE_DEP_IDX=0
 
 function CompileAddExtensions
 {
@@ -21,9 +16,7 @@ function CompileAddExtensions
 		local __srcExt=$1
 		local __outExt=$2
 		local __ruleType=$3
-		shift
-		shift
-		shift
+		shift 3
 		if [ "$__outExt" == "" -o "$__ruleType" == "" ]
 		then
 			echo "ERROR: CompileAddExtensions expects a tuple of arguments (srcext, outext, ruletype)"
@@ -62,7 +55,6 @@ function __addTarget
 	eval $1=$targVarName
 }
 
-declare __COMPILE_DEP_IDX=0
 function __addDepArray
 {
 	let __COMPILE_DEP_IDX++
@@ -141,18 +133,23 @@ function __addCompileTargets
 	done
 }
 
-function Executable
+function CompileAddTarget
 {
-	local __exeName=$1
-	shift
+	local __targName=$1
+	local __ruleName=$2
+	local __always=$3
+	shift 3
 
 	local __targVar
-	__addTarget __targVar $__exeName
+	__addTarget __targVar $__targName
 
-	eval ${__targVar}[meta]="$__exeName"
-	eval ${__targVar}[rule]="exe"
-	eval ${__targVar}[out]="${__exeName}"
-	eval ${__targVar}[always]="t"
+	if [ "${__always}" == t ]
+	then
+		eval ${__targVar}[meta]="${__targName}"
+	fi
+	eval ${__targVar}[rule]="${__ruleName}"
+	eval ${__targVar}[out]="${__targName}"
+	eval ${__targVar}[always]="${__always}"
 
 	__addCompileTargets "${__targVar}" "$@"
 
@@ -178,26 +175,36 @@ function __compile_emit_ninja_targets
 			__tCDep="${__tV}[cdep]"
 			__tTDep="${__tV}[targdep]"
 
-			local __tFullOut=${CURRENT_BINARY_DIR}${!__tOut}
+			local __tFullOut=${CURRENT_BINARY_PATH}${!__tOut}
+
+			## Ensure the output folder has been created
+			mkdir -p ${__tFullOut%/*}
+
 			if [ "${!__tMeta}" != "" ]
 			then
 				ALL_TARGETS+=( "${!__tMeta}" )
-				echo "build ${!__tMeta}: phony ${__tFullOut}" >> $__nFile
+				echo "build ${!__tMeta}: phony ${__tFullOut}" >> "${__nFile}"
 				if [ "${!__tAlways}" == "t" ]; then
-					echo "default ${!__tMeta}" >> $__nFile
+					echo "default ${!__tMeta}" >> "${__nFile}"
 				fi
 			fi
 			unset __tmp_expDeps
 			unset __tmp_impDeps
 			local -a __tmp_expDeps
 			local -a __tmp_impDeps
+
+			# Unset arrays as we no longer need them to keep the configure
+			# process lightweight
+			local -a __em_unsetNames=( ${__tAlways} ${__tDep} )
+
 			if [ "${!__tDep}" != "" ]; then
+				__em_unsetNames+=( ${!__tDep} )
 				__tDep="${!__tDep}[@]"
 				__tmp_expDeps+=( ${!__tDep} )
 			fi
 			if [ "${!__tCDep}" != "" ]; then
 				__tCDep="${!__tCDep}[@]"
-				__tmp_expDeps+=( ${!__tCDep/#/${CURRENT_BINARY_DIR}} )
+				__tmp_expDeps+=( ${!__tCDep/#/${CURRENT_BINARY_PATH}} )
 			fi
 			if [ "${!__tTDep}" != "" ]; then
 				__tTDep="${!__tTDep}[@]"
@@ -205,10 +212,15 @@ function __compile_emit_ninja_targets
 			fi
 
 			if [ ${#__tmp__impDeps[@]} -gt 0 ]; then
-				echo "build ${CURRENT_BINARY_DIR}${!__tOut}: ${!__tRule} ${__tmp_expDeps[@]} | ${__tmp_impDeps[@]}" >> $__nFile
+				echo "build ${__tFullOut}: ${!__tRule} ${__tmp_expDeps[@]} | ${__tmp_impDeps[@]}" >> "${__nFile}"
 			else
-				echo "build ${CURRENT_BINARY_DIR}${!__tOut}: ${!__tRule} ${__tmp_expDeps[@]}" >> $__nFile
+				echo "build ${__tFullOut}: ${!__tRule} ${__tmp_expDeps[@]}" >> "${__nFile}"
 			fi
+
+			for __oldVar in "${__em_unsetNames[@]}"
+			do
+				eval unset ${__oldVar}
+			done
 		done
 	fi
 }

@@ -8,7 +8,10 @@ Module compile
 CompileAddExtensions c o cc cpp o cxx cc o cxx C o cxx
 CompileAddDependOnlyExtensions h hxx H
 
-ModuleScopedArrays CFLAGS CXXFLAGS DEFINITIONS WARNINGS
+ModuleScopedArrays CFLAGS CXXFLAGS DEFINITIONS WARNINGS INCDIRS SYSINCDIRS
+
+declare -g __CPP_LIBRARY_CONFIG=static
+declare -g __CPP_ADD_BINARY_INCLUDE=f
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -33,6 +36,9 @@ while [ $# -gt 0 ]; do
 					;;
 			esac
 			;;
+		BINARY_INCLUDE)
+			__CPP_ADD_BINARY_INCLUDE=t
+			;;
 		*)
 			echo "ERROR: Unknown cpp_rules option '$1'"
 			return 1
@@ -42,53 +48,17 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-function __cpp_emit_ninja_setup
+function CPPLibraryConfig
 {
-	local __nFile=$1
-
-	if [ ${#DEFINITIONS[@]} -gt 0 ]
+	if [ "$1" == "shared" -o "$1" == "static" ]
 	then
-		echo "cflags = \$cflags ${DEFINITIONS[@]/#/-D}" >> $__nFile
-		echo "cxxflags = \$cxxflags ${DEFINITIONS[@]/#/-D}" >> $__nFile
-	fi
-	if [ ${#WARNINGS[@]} -gt 0 ]
-	then
-		echo "cflags = \$cflags ${WARNINGS[@]/#/-W}" >> $__nFile
-		echo "cxxflags = \$cxxflags ${WARNINGS[@]/#/-W}" >> $__nFile
-	fi
-	if [ ${#CFLAGS[@]} -gt 0 ]
-	then
-		echo "cflags = \$cflags ${CFLAGS[@]}" >> $__nFile
-	fi
-	if [ ${#CXXFLAGS[@]} -gt 0 ]
-	then
-		echo "cxxflags = \$cxxflags ${CXXFLAGS[@]}" >> $__nFile
+		__CPP_LIBRARY_CONFIG=$1
+	else
+		echo "ERROR: Invalid/unknown cpp library config specified: $1"
+		exit 1
 	fi
 }
 
-function __CPP_EmitterSetup
-{
-	case $EMITTER_STYLE in
-		ninja)
-			__cpp_emit_ninja_setup "$@"
-			;;
-		*)
-			echo "ERROR: Unknown emitter style for CPP rules"
-			exit 1
-			;;
-	esac
-}
-
-ModuleEmitterSetupFunc __CPP_EmitterSetup
-
-function __CPP_TopLevel
-{
-	if [ "$EMITTER_STYLE" == "ninja" ]; then
-		AddRuleFile config/cpp.ninja.rules
-	fi
-}
-
-ModuleTopLevelFunc __CPP_TopLevel
 
 function CFlags
 {
@@ -109,5 +79,137 @@ function Warnings
 {
 	WARNINGS+=("$@")
 }
+
+function IncludeDirs
+{
+	INCDIRS+=("${@/#/${CURRENT_SOURCE_PATH}}")
+}
+
+function SysIncludeDirs
+{
+	SYSINCDIRS+=("$@")
+}
+
+function Executable
+{
+	local __exeName=$1
+	shift
+	CompileAddTarget ${__exeName} exe t "$@"
+}
+
+function OptExecutable
+{
+	local __exeName=$1
+	shift
+	CompileAddTarget ${__exeName} exe f "$@"
+}
+
+function Library
+{
+	local __libName=$1
+	shift
+	if [ "${__CPP_LIBRARY_CONFIG}" == static ]; then
+		CompileAddTarget ${__libName} lib t "$@"
+	else
+		CompileAddTarget ${__libName} sharedlib t "$@"
+	fi
+}
+
+function SharedLibrary
+{
+	local __libName=$1
+	shift
+	CompileAddTarget ${__libName} sharedlib t "$@"
+}
+
+########################################
+## Emitter functions
+########################################
+
+function __cpp_emit_ninja_setup
+{
+	local __nFile=$1
+
+	if [ "$2" == t ] 
+	then
+		echo "defs = ${DEFINITIONS[@]/#/-D}" >> "${__nFile}"
+		echo "warn = ${WARNINGS[@]/#/-W}" >> "${__nFile}"
+		echo "cflags = ${CFLAGS[@]}" >> "${__nFile}"
+		echo "cxxflags = ${CXXFLAGS[@]}" >> "${__nFile}"
+		if [ "${__CPP_ADD_BINARY_INCLUDE}" == t ]
+		then
+			echo "incdirs = -I${CURRENT_BINARY_PATH%/} ${INCDIRS[@]/#/-I}" >> "${__nFile}"
+		else
+			echo "incdirs = ${INCDIRS[@]/#/-I}" >> "${__nFile}"
+		fi
+		echo "sysincdirs = ${SYSINCDIRS[@]/#/-isystem }" >> "${__nFile}"
+	else
+		if [ ${#DEFINITIONS[@]} -gt 0 ]
+		then
+			echo "defs = \$defs ${DEFINITIONS[@]/#/-D}" >> "${__nFile}"
+		fi
+
+		if [ ${#WARNINGS[@]} -gt 0 ]
+		then
+			echo "warn = \$warn ${WARNINGS[@]/#/-W}" >> "${__nFile}"
+		fi
+
+		if [ ${#CFLAGS[@]} -gt 0 ]
+		then
+			echo "cflags = \$cflags ${CFLAGS[@]}" >> "${__nFile}"
+		fi
+
+		if [ ${#CXXFLAGS[@]} -gt 0 ]
+		then
+			echo "cxxflags = \$cxxflags ${CXXFLAGS[@]}" >> "${__nFile}"
+		fi
+
+		if [ ${#INCDIRS[@]} -gt 0 ]
+		then
+			if [ "${__CPP_ADD_BINARY_INCLUDE}" == t ]
+			then
+				echo "incdirs = -I${CURRENT_BINARY_PATH%/} \$incdirs ${INCDIRS[@]/#/-I}" >> "${__nFile}"
+			else
+				echo "incdirs = \$incdirs ${INCDIRS[@]/#/-I}" >> "${__nFile}"
+			fi
+		else
+			if [ "${__CPP_ADD_BINARY_INCLUDE}" == t ]
+			then
+				echo "incdirs = -I${CURRENT_BINARY_PATH%/} \$incdirs" >> "${__nFile}"
+			fi
+		fi
+
+		if [ ${#SYSINCDIRS[@]} -gt 0 ]
+		then
+			echo "sysincdirs = \$sysincdirs ${SYSINCDIRS[@]/#/-isystem }" >> "${__nFile}"
+		fi
+	fi
+}
+
+function __CPP_EmitterSetup
+{
+	case $EMITTER_STYLE in
+		ninja)
+			__cpp_emit_ninja_setup "$@"
+			;;
+		*)
+			echo "ERROR: Unknown emitter style for CPP rules"
+			exit 1
+			;;
+	esac
+}
+
+ModuleEmitterSetupFunc __CPP_EmitterSetup
+
+function __CPP_StartWrite
+{
+	if [ "$1" == start ]; then
+		if [ "$EMITTER_STYLE" == "ninja" ]; then
+			AddRuleFile config/cpp.ninja.rules
+		fi
+	fi
+}
+
+ModuleStartWriteFunc __CPP_StartWrite
 
 return 0

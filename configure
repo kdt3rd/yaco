@@ -3,15 +3,29 @@
 trap "echo Exiting..." SIGINT SIGTERM
 
 declare -a BUILD_FILES=($(readlink -f $0))
-readonly TOP_SOURCE_DIR=$(dirname ${BUILD_FILES[0]})
+
+#echo "Full Configure: ${BUILD_FILES[0]}"
+#echo "Full Dir: ${BUILD_FILES[0]%/*}"
+#echo "Full Base: ${BUILD_FILES[0]##*/}"
+readonly TOP_SOURCE_DIR=${BUILD_FILES[0]%/*}
 readonly SYSTEM=$(uname -s)
 readonly ARCH=$(uname -m)
-readonly FLAVOR=$(lsb_release -s -i)
+if [ ! -z $(type -p lsb_release) ]
+then
+	readonly FLAVOR=$(lsb_release -s -i)
+else
+	readonly FLAVOR="*"
+fi
 
-echo "Configuring for $SYSTEM, $ARCH, $FLAVOR"
-
-declare BUILD_TYPE=$1
-declare OUTPUT_ROOT=${TOP_SOURCE_DIR}
+declare BUILD_TYPE="$1"
+declare TOP_BINARY_DIR
+if [ -z "$2" ]
+then
+	declare OUTPUT_ROOT="${PWD%/$}/"
+else
+	declare OUTPUT_ROOT="${2%/$}/"
+	TOP_BINARY_DIR="${OUTPUT_ROOT}${BUILD_TYPE}/"
+fi
 
 declare -a ALL_TARGETS
 declare -A OUTPUT_DIRS
@@ -20,7 +34,8 @@ declare -a SCOPED_VARS
 declare -a SCOPED_ARRAYS
 declare -a EMITTER_SETUP_FUNCS
 declare -a EMITTER_TARGET_FUNCS
-declare -a TOP_LEVEL_FUNCS
+declare -a PREWRITE_FUNCS
+declare -a HEADER_FUNCS
 declare EMITTER_STYLE=ninja
 
 function SetEmitter
@@ -30,19 +45,25 @@ function SetEmitter
 
 function OutputRoot
 {
-	OUTPUT_ROOT=$1
+	OUTPUT_ROOT="${1%/$}/"
+	if [ ! -z "${BUILD_TYPE}" ]
+	then
+		TOP_BINARY_DIR="${OUTPUT_ROOT}${OUTPUT_ROOT[${BUILD_TYPE}]}"
+		if [ -v CURRENT_BINARY_PATH ]
+		then
+			CURRENT_BINARY_PATH="${TOP_BINARY_DIR}${CURRENT_DIR}"
+		fi
+	fi
 }
 
 function BuildType
 {
 	OUTPUT_DIRS[$1]=$2
-}
-
-function DefaultBuildType
-{
-	if [ -z "${BUILD_TYPE}" ]
+	if [ "$3" == "DEFAULT" -o -z "${BUILD_TYPE}" ]
 	then
 		BUILD_TYPE=$1
+		TOP_BINARY_DIR="${OUTPUT_ROOT}${2}"
+		CURRENT_BINARY_PATH="${TOP_BINARY_DIR}${CURRENT_DIR}"
 	fi
 }
 
@@ -93,51 +114,87 @@ function AddRuleFile
 	fi
 }
 
+function __write_ninja_header_footer
+{
+	local __nFile=$1
+	local __topLevel=$2
+	local __type=$3
+
+	if [ "$__topLevel" == t ]
+	then
+		case "$__type" in
+			header)
+				echo "build always: phony" >> "${__nFile}"
+				;;
+			footer)
+				# emit the "all targets" rule
+				echo "build all: phony ${ALL_TARGETS[@]}" >> "${__nFile}"
+
+				# emit the rule to re-generate ourselves
+				echo -e "\nrule rerun_configure\n  command = ${BUILD_FILES[0]} ${BUILD_TYPE} ${OUTPUT_ROOT}\n  description = Re-running configuration...\n  generator = 1\n" >> "${__nFile}"
+				echo "build build.ninja: rerun_configure | ${BUILD_FILES[@]}" >> "${__nFile}"
+				;;
+			*)
+				echo "ERROR: Unknow header / footer tag"
+				exit 1
+				;;
+		esac				
+	fi
+}
+
 function __write_ninja
 {
-	local cur_NINJA_FILE=${CURRENT_BINARY_DIR}build.ninja
+	local cur_NINJA_FILE=${CURRENT_BINARY_PATH}build.ninja
 
 	truncate --size=0 $cur_NINJA_FILE
 
-	if [ "$1" == t ]
-	then
-		echo "build always: phony" >> $cur_NINJA_FILE
-	fi
+	for __f in "${HEADER_FUNCS[@]}"
+	do
+		eval $__f "${cur_NINJA_FILE}" $1 header
+	done
 
 	for i in "${LOCAL_RULE_FILES[@]}"
 	do
-		echo "include $i" >> $cur_NINJA_FILE
+		echo "include $i" >> "$cur_NINJA_FILE"
 	done
 
 	for i in "${!LOCAL_VARS[@]}"
 	do
-		echo "$i = ${LOCAL_VARS[$i]}" >> $cur_NINJA_FILE
+		echo "$i = ${LOCAL_VARS[$i]}" >> "$cur_NINJA_FILE"
 	done
 
 	for __emitter in "${EMITTER_SETUP_FUNCS[@]}"
 	do
-		eval $__emitter $cur_NINJA_FILE $2
+		eval $__emitter "$cur_NINJA_FILE" $1
 	done
 
 	for __emitter in "${EMITTER_TARGET_FUNCS[@]}"
 	do
-		eval $__emitter $cur_NINJA_FILE $2
+		eval $__emitter "$cur_NINJA_FILE" $1
 	done
 
 	for i in "${SUBDIRS_VISITED[@]}"
 	do
-		echo "subninja ${CURRENT_BINARY_DIR}$i/build.ninja" >> $cur_NINJA_FILE
+		echo "subninja ${CURRENT_BINARY_PATH}$i/build.ninja" >> "$cur_NINJA_FILE"
 	done
 
-	if [ "$1" == t ]
-	then
-		# emit the "all targets" rule
-		echo "build all: phony ${ALL_TARGETS[@]}" >> $cur_NINJA_FILE
+	for __f in "${HEADER_FUNCS[@]}"
+	do
+		eval $__f "$cur_NINJA_FILE" $1 footer
+	done
+}
 
-		# emit the rule to re-generate ourselves
-		echo -e "\nrule rerun_configure\n  command = ${BUILD_FILES[0]} ${BUILD_TYPE}\n  description = Re-running configuration...\n  generator = 1\n" >> $cur_NINJA_FILE
-		echo "build build.ninja: rerun_configure | ${BUILD_FILES[@]}" >> $cur_NINJA_FILE
-	fi
+function __MAIN_HeaderFooter
+{
+	case $EMITTER_STYLE in
+		ninja)
+			__write_ninja_header_footer "$@"
+			;;
+		*)
+			echo "ERROR: Unknown emitter for configure rules"
+			exit 1
+			;;
+	esac
 }
 
 function OutputBuildFile
@@ -151,15 +208,14 @@ function OutputBuildFile
 		fi
 	fi
 
-	local CURRENT_BINARY_DIR=${OUTPUT_ROOT}/${OUTPUT_DIRS[${BUILD_TYPE}]}$1
-	mkdir -p $CURRENT_BINARY_DIR
+	mkdir -p $CURRENT_BINARY_PATH
 	
 	case $EMITTER_STYLE in
 		ninja)
 			__write_ninja $2
 			;;
 		*)
-			echo "ERROR: Unknown emitter for CPP rules"
+			echo "ERROR: Unknown emitter for configure rules"
 			exit 1
 			;;
 	esac
@@ -167,10 +223,15 @@ function OutputBuildFile
 
 function ProcessDirectory
 {
-	local CURRENT_DIR=${CURRENT_DIR}$1/
-	local tmpFILE=${TOP_SOURCE_DIR}${CURRENT_DIR}build.txt
+	local CURRENT_DIR="${CURRENT_DIR}$1/"
+	local tmpFILE="${TOP_SOURCE_DIR}${CURRENT_DIR}build.txt"
 
-	local CURRENT_SOURCE_PATH=${TOP_SOURCE_DIR}${CURRENT_DIR}
+	local CURRENT_SOURCE_PATH="${TOP_SOURCE_DIR}${CURRENT_DIR}"
+	local CURRENT_BINARY_PATH
+	if [ ! -z "${TOP_BINARY_DIR}" ]
+	then
+		CURRENT_BINARY_PATH="${TOP_BINARY_DIR}${CURRENT_DIR}"
+	fi
 
 	local __topLevel=f
 	if [ -z "$1" ]
@@ -202,9 +263,9 @@ function ProcessDirectory
 
 		if [ $__topLevel == t ]
 		then
-			for __tl in "${TOP_LEVEL_FUNCS[@]}"
+			for __tl in "${PREWRITE_FUNCS[@]}"
 			do
-				eval $__tl
+				eval $__tl start
 			done
 		fi
 
@@ -272,12 +333,24 @@ function ModuleEmitterTargetFunc
 	EMITTER_TARGET_FUNCS+=("$@")
 }
 
-# Top Level Funcs are called automagically on the top level
+# Pre-write Funcs are called automagically on the top level
 # context prior to writing out any build file for the top level
-# but after processing the top level build file
-function ModuleTopLevelFunc
+# but after processing the top level build file. NB: may be
+# after other config files have been written
+function ModuleStartWriteFunc
 {
-	TOP_LEVEL_FUNCS+=("$@")
+	PREWRITE_FUNCS+=( "$@" )
+}
+
+function ModuleHeaderWriteFunc
+{
+	# Make it so the main one runs last...
+	if [ ${#HEADER_FUNCS[@]} -gt 0 ]
+	then
+		HEADER_FUNCS=( "$@" ${HEADER_FUNCS[@]} )
+	else
+		HEADER_FUNCS+=( "$@" )
+	fi
 }
 
 ##
@@ -314,6 +387,7 @@ function Module
 	fi
 }
 
+ModuleHeaderWriteFunc __MAIN_HeaderFooter
+
 ProcessDirectory
 
-echo "Finished generating build files for configuration '$BUILD_TYPE'..."

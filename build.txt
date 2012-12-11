@@ -9,20 +9,21 @@
 # SetEmitter ninja
 
 # offer 3 different configurations
-
+# NB: The first one will become the default unless you tag a build as default
 BuildType debug Debug
-BuildType build Build
+BuildType build Build DEFAULT
 BuildType release Release
-
-DefaultBuildType build
 
 # turns on c and c++ compile things
 # Module cpp
 # can specify options, like which compiler to use, like this:
-Module cpp COMPILER clang
+# Module cpp COMPILER clang
+# or to add the binary directory to the include path (useful for auto-generated Qt files)
+Module cpp COMPILER clang BINARY_INCLUDE
 
-LibraryConfig static
-#LibraryConfig shared
+
+#CPPLibraryConfig static
+#CPPLibraryConfig shared
 
 # set the global warnings we care about
 Warnings everything no-thread-safety no-padded no-unused-parameter no-c++98-compat-pedantic no-shorten-64-to-32 no-packed no-conversion no-sign-conversion no-disabled-macro-expansion no-global-constructors no-exit-time-destructors no-float-equal
@@ -30,23 +31,21 @@ Warnings everything no-thread-safety no-padded no-unused-parameter no-c++98-comp
 
 if Building debug; then
 CFlags -ggdb -fvar-tracking-uninit -fbounds-check -fcheck-data-deps
-CXXFlags -ggdb -fvar-tracking-uninit -fbounds-check -fcheck-data-deps
 fi
 
 if Building build; then
 CFlags -O3
-CXXFlags -O3
 Definitions NDEBUG
 fi
 
 if Building release; then
 CFlags -O3
-CXXFlags -O3
 Definitions NDEBUG RELEASE_MODE
 fi
 
-Definitions __STDC_LIMIT_MACROS _FILE_OFFSET_BITS=64
+CXXFlags -std=c++11 -stdlib=libc++
+IncludeDirs include
 
-Executable Test foo.cpp
+Definitions __STDC_LIMIT_MACROS _FILE_OFFSET_BITS=64
 
 SubDir src
