@@ -1,0 +1,4 @@
+
+rule unittest_retval
+  command = $in > $out
+  description = Testing ($in)

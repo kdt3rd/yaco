@@ -1,0 +1,88 @@
+# -*- mode: Shell-script -*-
+
+#
+# Rules for running unittests
+#
+
+Module compile
+
+ModuleScopedArrays UNITTEST_RV_LIST
+declare -A -g __UNITTEST_TEST_LIST
+
+#
+# declares a unittest where the rule only checks the return status
+#
+function UnitTestExeStatus
+{
+	local __testName=$1
+	shift
+	CompileAddTarget ${__testName} exe f "$@"
+	UNITTEST_RV_LIST+=( "${__testName}" )
+	__UNITTEST_TEST_LIST["run_${CURRENT_DIR}${__testName}"]="${__testName}"
+}
+
+function __unittest_emit_ninja_targets
+{
+	local __nFile=$1
+	for __t in "${UNITTEST_RV_LIST[@]}"
+	do
+		local __tFullOut="${TOP_BINARY_DIR}/test${CURRENT_DIR}${__t}"
+		mkdir -p ${__tFullOut%/*}
+		echo "build ${__tFullOut}: unittest_retval ${CURRENT_BINARY_PATH}${__t}" >> "$__nFile"
+		echo "build run_${CURRENT_DIR}${__t}: phony ${__tFullOut}" >> "$__nFile"
+	done
+}
+
+function __unittest_EmitTargets
+{
+	case $EMITTER_STYLE in
+		ninja)
+			__unittest_emit_ninja_targets "$@"
+			;;
+		*)
+			echo "ERROR: Unknown emitter style for compile rules"
+			exit 1
+			;;
+	esac
+}
+
+function __unittest_emit_ninja_footer
+{
+	local __nFile=$1
+	local __topLevel=$2
+	local __type=$3
+
+	if [ "$__topLevel" == t -a "$__type" == footer ]
+	then
+		if [ ${#__UNITTEST_TEST_LIST[@]} -gt 0 ]
+		then
+			echo "build test: phony ${!__UNITTEST_TEST_LIST[@]}" >> "$__nFile"
+		fi
+	fi
+}
+
+function __unittest_HeaderFooter
+{
+	case $EMITTER_STYLE in
+		ninja)
+			__unittest_emit_ninja_footer "$@"
+			;;
+		*)
+			echo "ERROR: Unknown emitter style for compile rules"
+			exit 1
+			;;
+	esac
+}
+
+function __unittest_StartWrite
+{
+	if [ "$1" == start ]; then
+		if [ "$EMITTER_STYLE" == "ninja" ]; then
+			AddRuleFile config/unittest.ninja.rules
+		fi
+	fi
+}
+
+ModuleEmitterTargetFunc __unittest_EmitTargets
+ModuleHeaderWriteFunc __unittest_HeaderFooter
+ModuleStartWriteFunc __unittest_StartWrite
