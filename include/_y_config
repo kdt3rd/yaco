@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 /// This is a mirror of some of what libc++ and similar set up
 
 #if _WIN32
