@@ -32,7 +32,7 @@
 
 /// This is a mirror of some of what libc++ and similar set up
 
-#if _WIN32
+#ifdef _WIN32
 // Need to deal with dll visibility and all that at some point
 
 #ifndef _YACO_INLINE
