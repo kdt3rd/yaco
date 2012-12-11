@@ -1,2 +1,18 @@
+# -*- mode: Shell-script -*-
+
+#Library yaco
+#
+#yaco()
+#{
+#	CFLAGS="-DFOO" Compile yaco.cpp
+#	CFLAGS="-DBAR" Compile bar.cpp
+#
+#	UsePackages QtGui QtCore
+#}
+#sources=( yaco.cpp bar.cpp )
+#packages=( QtGui )
+
+Library yaco \
+  yaco.cpp
+
 SubDir test
-LocalVar xx bar
