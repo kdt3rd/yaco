@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include "_y_config"
+
 #include <tuple>
 #include <functional>
 
@@ -48,14 +50,14 @@ struct gen_sequence<0, S...>
 // call from a tuple definition of it's arguments
 namespace {
 
-template <typename R, typename... FuncArgs, typename... Args, size_t ...S>
-R __dispatch_help( const std::function<R (FuncArgs...)> &f, const std::tuple<Args...> &args, const unpack_sequence<S...> & )
+template <typename R, typename... FuncArgs, typename TupleType, size_t ...S>
+R __dispatch_help( const std::function<R (FuncArgs...)> &f, const TupleType &args, const unpack_sequence<S...> & )
 {
 	return f( std::get<S>(args)... );
 }
 
-template <typename R, typename... FuncArgs, typename... Args, size_t ...S>
-R __dispatch_help( R (*f)(FuncArgs...), const std::tuple<Args...> &args, const unpack_sequence<S...> & )
+template <typename R, typename... FuncArgs, typename TupleType, size_t ...S>
+R __dispatch_help( R (*f)(FuncArgs...), const TupleType &args, const unpack_sequence<S...> & )
 {
 	return f( std::get<S>(args)... );
 }
@@ -65,12 +67,21 @@ R __dispatch_help( R (*f)(FuncArgs...), const std::tuple<Args...> &args, const u
 /// @brief Enables one to store arguments for a function call as a tuple
 /// for later execution, then call that function, dereferencing the tuple
 /// into the individual arguments
-template <typename R, typename... FuncArgs, typename... Args>
+template <typename R, typename... FuncArgs, typename TupleType>
 R
-call_func_from_tuple( const std::function<R (FuncArgs...)> &f, const std::tuple<Args...> &args )
+call_func_from_tuple( const std::function<R (FuncArgs...)> &f, const TupleType &args )
 {
-	static_assert( sizeof...(FuncArgs) == sizeof...(Args), "Mis-match of function argument count to arguments provided" );
-	return __dispatch_help( f, args, typename gen_sequence<sizeof...(Args)>::type() );
+	static_assert( sizeof...(FuncArgs) == std::tuple_size<TupleType>::value, "Mis-match of function argument count to arguments provided" );
+	return R();
+//	return __dispatch_help( f, args, typename gen_sequence<sizeof...(FuncArgs)>::type() );
+}
+
+template <typename... FuncArgs, typename TupleType>
+void
+call_func_from_tuple( const std::function<void (FuncArgs...)> &f, const TupleType &args )
+{
+	static_assert( sizeof...(FuncArgs) == std::tuple_size<TupleType>::value, "Mis-match of function argument count to arguments provided" );
+	__dispatch_help( f, args, typename gen_sequence<sizeof...(FuncArgs)>::type() );
 }
 
 } // namespace yaco
