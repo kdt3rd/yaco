@@ -92,19 +92,19 @@ fmt_build( std::basic_ostream<charT> &__os, const fmtCharT *__s, const T &__args
 		if ( std::char_traits<fmtCharT>::eq( *__s, __fmtTag ) )
 		{
 			++__s;
-			int __curC = std::char_traits<charT>::to_int_type( *__s );
+			typename std::char_traits<charT>::int_type __curC = std::char_traits<charT>::to_int_type( *__s );
 
 			if ( ! std::isdigit( __curC ) )
 				throw std::runtime_error( "Invalid fmt format string: expecting position indicator" );
 
 			size_t __idx = 0;
-			while ( curC && std::isdigit( curC ) )
+			while ( __curC && std::isdigit( __curC ) )
 			{
 				__idx *= 10;
-				__idx += ( curC - std::char_traits<char>::to_int_type( '0' ) );
+				__idx += ( __curC - std::char_traits<char>::to_int_type( '0' ) );
 				++__s;
 			}
-			fmt_arg<charT, 0, std::tuple_size<T>::value, const T &>::output( __os, __idx, __args );
+			fmt_arg<charT, 0, std::tuple_size<T>::value>::output( __os, __idx, __args );
 		}
 		else
 		{

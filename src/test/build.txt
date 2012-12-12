@@ -3,4 +3,5 @@
 Module unittest
 
 UnitTestExeStatus varFuncDisp varFuncDisp.cpp
+UnitTestExeStatus strSplit strSplit.cpp
 

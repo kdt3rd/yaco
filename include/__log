@@ -32,6 +32,8 @@
 #include <locale>
 #include <sstream>
 
+#include "_y_config"
+
 namespace yaco
 {
 
