@@ -16,7 +16,7 @@ function UnitTestExeStatus
 {
 	local __testName=$1
 	shift
-	CompileAddTarget ${__testName} exe f "$@"
+	CompileAddTarget "${__testName}" "${__testName}" exe f "$@"
 	UNITTEST_RV_LIST+=( "${__testName}" )
 	__UNITTEST_TEST_LIST["run_${CURRENT_DIR}${__testName}"]="${__testName}"
 }

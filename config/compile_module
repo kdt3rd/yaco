@@ -136,9 +136,10 @@ function __addCompileTargets
 function CompileAddTarget
 {
 	local __targName=$1
-	local __ruleName=$2
-	local __always=$3
-	shift 3
+	local __outName=$2
+	local __ruleName=$3
+	local __always=$4
+	shift 4
 
 	local __targVar
 	__addTarget __targVar $__targName
@@ -148,7 +149,7 @@ function CompileAddTarget
 		eval ${__targVar}[meta]="${__targName}"
 	fi
 	eval ${__targVar}[rule]="${__ruleName}"
-	eval ${__targVar}[out]="${__targName}"
+	eval ${__targVar}[out]="${__outName}"
 	eval ${__targVar}[always]="${__always}"
 
 	__addCompileTargets "${__targVar}" "$@"

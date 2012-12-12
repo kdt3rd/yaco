@@ -94,14 +94,14 @@ function Executable
 {
 	local __exeName=$1
 	shift
-	CompileAddTarget ${__exeName} exe t "$@"
+	CompileAddTarget "${__exeName}" "${__exeName}" exe t "$@"
 }
 
 function OptExecutable
 {
 	local __exeName=$1
 	shift
-	CompileAddTarget ${__exeName} exe f "$@"
+	CompileAddTarget "${__exeName}" "${__exeName}" exe f "$@"
 }
 
 function Library
@@ -109,9 +109,9 @@ function Library
 	local __libName=$1
 	shift
 	if [ "${__CPP_LIBRARY_CONFIG}" == static ]; then
-		CompileAddTarget ${__libName} lib t "$@"
+		CompileAddTarget "${__libName}" "lib${__libName}.a" lib t "$@"
 	else
-		CompileAddTarget ${__libName} sharedlib t "$@"
+		CompileAddTarget "${__libName}" "lib${__libName}.so" sharedlib t "$@"
 	fi
 }
 
@@ -119,7 +119,7 @@ function SharedLibrary
 {
 	local __libName=$1
 	shift
-	CompileAddTarget ${__libName} sharedlib t "$@"
+	CompileAddTarget ${__libName} "lib${__libName}.so" sharedlib t "$@"
 }
 
 ########################################
