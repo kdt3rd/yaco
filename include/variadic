@@ -76,9 +76,9 @@ call_func_from_tuple( const std::function<R (FuncArgs...)> &f, const TupleType &
 //	return __dispatch_help( f, args, typename gen_sequence<sizeof...(FuncArgs)>::type() );
 }
 
-template <typename... FuncArgs, typename TupleType>
+template <typename R, typename... FuncArgs, typename TupleType>
 void
-call_func_from_tuple( const std::function<void (FuncArgs...)> &f, const TupleType &args )
+call_func_from_tuple( R (*f)(FuncArgs...), const TupleType &args )
 {
 	static_assert( sizeof...(FuncArgs) == std::tuple_size<TupleType>::value, "Mis-match of function argument count to arguments provided" );
 	__dispatch_help( f, args, typename gen_sequence<sizeof...(FuncArgs)>::type() );
