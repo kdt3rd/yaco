@@ -44,6 +44,8 @@ Definitions NDEBUG RELEASE_MODE
 fi
 
 CXXFlags -std=c++11 -stdlib=libc++
+LocalVar ldflags -lc++ -lc++abi
+
 IncludeDirs include
 
 Definitions __STDC_LIMIT_MACROS _FILE_OFFSET_BITS=64
