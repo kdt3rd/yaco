@@ -252,7 +252,6 @@ def SubDir( name ):
         _cur_bin_dir = os.path.join( _build_root_dir, curd )
 
 def _writeBuildFiles():
-    print( "Writing build files..." )
     try:
         os.makedirs( _build_root_dir )
     except OSError as e:
