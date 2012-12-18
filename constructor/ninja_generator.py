@@ -144,6 +144,50 @@ def DefineGlobal( v, x ):
     global _globalVars
     _globalVars[v] = x
 
+_subdirVars = {}
+def AddToVar( v, x ):
+    global _subdirVars
+    global _globalVars
+    cd = GetCurrentSourceRelDir()
+    if len(cd) == 0:
+        gl = _globalVars.get( v )
+        if gl is None:
+            if isinstance( x, list ):
+                _globalVars[v] = x.copy()
+            else:
+                _globalVars[v] = [ x ]
+        elif isinstance( gl, list ):
+            if isinstance( x, list ):
+                gl = gl + x
+            else:
+                gl.append( x )
+        else:
+            _globalVars[v] = [ gl, x ]
+    else:
+        sl = _subdirVars.get( cd )
+        if sl is None:
+            sl = {}
+            sl[v] = [ x ]
+            _subdirVars[cd] = sl
+        else:
+            vl = sl.get( v )
+            if vl is None:
+                if isinstance( x, list ):
+                    sl[v] = x.copy()
+                else:
+                    sl[v] = [ x ]
+            elif isinstance( x, list ):
+                vl = vl + x
+            else:
+                vl.append( x )
+
+def PopulateVarsFromEnv():
+    global _envVars
+    for k, v in _envVars.iteritems():
+        t = os.environ.get( k )
+        if t is not None:
+            _envVars[k] = t
+
 def AddRule( **rargs ):
     global _rules
     r = None
@@ -186,16 +230,21 @@ def FindTarget( name ):
 def GetTargetType( x ):
     return x.GetType()
 
+_phonyTargets = {}
+def AddToAliasTarget( name, item ):
+    global _phonyTargets
+    lt = _phonyTargets.get( name )
+    if lt is None:
+        _phonyTargets[name] = [ item ]
+    else:
+        lt.append( item )
+
 def AddConfigureFile( fn ):
     global _generatorFiles
-    _generatorFiles.append( os.path.join( GetCurrentSourceDir(), fn ) )
-
-def PopulateVarsFromEnv():
-    global _envVars
-    for k, v in _envVars.iteritems():
-        t = os.environ.get( k )
-        if t is not None:
-            _envVars[k] = t
+    if os.path.isabs( fn ):
+        _generatorFiles.append( fn )
+    else:
+        _generatorFiles.append( os.path.join( GetCurrentSourceDir(), fn ) )
 
 def AddOutputDir( d ):
     global _extraDirs
@@ -253,10 +302,27 @@ def WriteBuildFiles( root, build_dir, build_config ):
     for k, v in _subdirTargets.iteritems():
         subfile = os.path.join( root, k, "build.ninja" )
         subout = open( subfile, 'wb' )
+        sdvar = _subdirVars.get( k )
+        if sdvar is not None:
+            for v, x in sdvar.iteritems():
+                out.write( v )
+                out.write( ' = ' )
+                out.write( string.join( x ) )
+                out.write( '\n' )
+
         for t in v:
             t.write( subout )
         out.write( '\nsubninja ' )
         out.write( subfile )
+
+    if len(_phonyTargets) > 0:
+        out.write( '\n' )
+        for k, l in _phonyTargets.iteritems():
+            out.write( '\nbuild ' )
+            out.write( k )
+            out.write( ': phony' )
+            for t in l:
+                t.addOutputs( out )
 
     if len(_defaultTargets) > 0:
         out.write( "\ndefault" )

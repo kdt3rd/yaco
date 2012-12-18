@@ -1,5 +1,6 @@
 
 EnableModule( "lang_cpp" )
+EnableModule( "unittest" )
 
 BuildConfig( "build", "Build", default=True )
 BuildConfig( "debug", "Debug" )
@@ -13,6 +14,9 @@ if sys.platform.startswith( 'darwin' ):
     generator.DefineGlobal( 'CC', FindExecutable( "clang" ) )
     generator.DefineGlobal( 'CXX', FindExecutable( "clang++" ) )
     generator.DefineGlobal( 'LD', FindExecutable( "clang++" ) )
-    generator.DefineGlobal( 'CXXFLAGS', [ "-std=c++11" ] )
+    generator.DefineGlobal( 'CXXFLAGS', [ "-std=c++11", "-stdlib=libc++" ] )
     generator.DefineGlobal( 'AR', FindExecutable( "ar" ) )
-    generator.DefineGlobal( 'WARN', [ "-Weverything" ] )
+    generator.DefineGlobal( 'WARN', [ "-Weverything", "-Wno-c++98-compat" ] )
+    generator.DefineGlobal( 'LDFLAGS', [ "-lc++" ] )
+
+Include( "include" )

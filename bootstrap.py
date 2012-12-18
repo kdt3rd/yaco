@@ -195,11 +195,18 @@ def SetGenerator( name ):
     generator = Generator( new_globs )
     generator.AddConfigureFile( name + '_generator.py' )
     _cur_src_dir = curd
+    generator.AddConfigureFile( _bootstrap )
     return
 
+_active_module_list = []
 def EnableModule( name ):
-    global _cur_src_dir
     global _source_root_dir
+    global _cur_src_dir
+    global _active_module_list
+
+    if name in _active_module_list:
+        return
+    _active_module_list.append( name )
 
     curd = _cur_src_dir
     _cur_src_dir = os.path.join( _source_root_dir, 'constructor' )
@@ -207,6 +214,7 @@ def EnableModule( name ):
     namespace = globals().copy()
 
     _source_file( name + '_module.py', namespace, namespace )
+    generator.AddConfigureFile( name + '_module.py' )
 
     all_names = namespace.get("__all__")
     new_globs = {}

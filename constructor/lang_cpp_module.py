@@ -43,6 +43,16 @@ _cxxLine = [ generator.Var( "CXX" ), generator.Var( "CFLAGS" ),
 _statLibLine = [ 'rm', '-f', _outVar, ';',
                  generator.Var( "AR" ), generator.Var( "ARFLAGS" ), "cur",
                  _outVar, _inVar ]
+_cxxLine = [ generator.Var( "CXX" ), generator.Var( "CFLAGS" ), 
+             generator.Var( "CXXFLAGS" ), generator.Var( "DEFS" ),
+             generator.Var( "WARN" ), generator.Var( "INC" ),
+             generator.Var( "SYSINC" ),
+             '-MMD', '-MF', _outVar + '.d',
+             '-o', _outVar,
+             '-c', _inVar ]
+_exeLine = [ generator.Var( "LD" ), generator.Var( "RPATH" ),
+             generator.Var( "LDFLAGS" ), _inVar,
+             '-o', _outVar ]
 
 if sys.platform == 'win32':
     _object_file_ext = '.obj'
@@ -69,6 +79,7 @@ generator.DefineEnvVar( "LDFLAGS" )
 
 _cppRule = generator.AddRule( tag='cpp', cmd=_cxxLine, desc="CXX", depfile=(_outVar + ".d"), descUseIn=True )
 _staticLibRule = generator.AddRule( tag='lib', cmd=_statLibLine, desc="AR", descUseIn=False )
+_exeRule = generator.AddRule( tag='exe', cmd=_exeLine, desc="LINK", descUseIn=False )
 
 def CFlags( *args ):
     return
@@ -83,6 +94,11 @@ def SysLibs( *args ):
     return
 
 def Include( *args ):
+    for a in args:
+        if os.path.isabs( a ):
+            generator.AddToVar( "INC", "-I" + a )
+        else:
+            generator.AddToVar( "INC", "-I" + os.path.join( GetCurrentSourceDir(), a ) )
     return
 
 def _handleC( f, base, ext ):
@@ -122,6 +138,8 @@ def _handleName( f ):
     else:
         raise NameError( "Unhandled name attempting to compile object '%s'" %f )
 
+_built_libs = {}
+
 def _createLibDependencies( *args ):
     explicit = []
     shared_only = []
@@ -134,10 +152,14 @@ def _createLibDependencies( *args ):
                 shared_only.append( f )
         except AttributeError:
             if isinstance( f, (str, basestring) ):
-                x = _handleName( f )
-                e, i = _createLibDependencies( *x )
-                explicit = explicit + e
-                shared_only = shared_only + i
+                tmpl = _built_libs.get( f )
+                if tmpl is not None:
+                    shared_only.append( tmpl )
+                else:
+                    x = _handleName( f )
+                    e, i = _createLibDependencies( *x )
+                    explicit = explicit + e
+                    shared_only = shared_only + i
             elif isinstance( f, list ):
                 e, i = _createLibDependencies( *f )
                 explicit = explicit + e
@@ -152,15 +174,40 @@ def _createLibDependencies( *args ):
     return explicit, shared_only
 
 def Library( *args ):
+    global _built_libs
+
     name = args[0]
+
     out = 'lib' + name + _static_lib_ext
     generator.AddOutputDir( 'lib' )
     outPath = os.path.join( GetBuildRootDir(), 'lib', out )
-    (exp, shared) = _createLibDependencies( args[1:] )
+    exp, shared = _createLibDependencies( args[1:] )
     l = generator.AddTarget( out=outPath, gen_type='lib', short=out, dep=exp,
                              impl_dep=shared, default=True, rule=_staticLibRule )
-    sys.stdout.write( "Adding library: %s, TODO - add .so support\n" % name )
-    
+    _built_libs[name] = l
+    return l
+
+def Executable( *args ):
+    name = args[0]
+    out = name + _exe_ext
+    generator.AddOutputDir( 'bin' )
+    outPath = os.path.join( GetBuildRootDir(), 'bin', out )
+    exp, shared = _createLibDependencies( args[1:] )
+    exp = exp + shared
+    e = generator.AddTarget( out=outPath, gen_type='exe', short=out, dep=exp,
+                             default=True, rule=_exeRule )
+    return e
+
+def OptExecutable( *args ):
+    name = args[0]
+    out = name + _exe_ext
+    generator.AddOutputDir( 'bin' )
+    outPath = os.path.join( GetBuildRootDir(), 'bin', out )
+    exp, shared = _createLibDependencies( args[1:] )
+    exp = exp + shared
+    e = generator.AddTarget( out=outPath, gen_type='exe', short=out, dep=exp,
+                             default=False, rule=_exeRule )
+    return e
 
 def Compile( *args ):
     ret = []
