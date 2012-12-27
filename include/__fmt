@@ -34,11 +34,60 @@
 #include <stdexcept>
 
 
+////////////////////////////////////////
+
+
 namespace yaco
 {
 
 namespace __priv
 {
+
+// @todo: Remove this once os/x updates xcode with a more current
+// libcxx that has the constexpr to_int_type, et al.
+template <typename charT> constexpr int fmt_to_int( charT c ) { return int( c ); }
+template <typename charT> constexpr charT fmt_to_char( int c ) { return charT( c ); }
+
+
+template <typename charT>
+size_t
+fmt_number( const charT * &fmt, const char *errorTag )
+{
+	size_t retval = 0;
+	typedef typename std::char_traits<charT>::int_type intT;
+
+	constexpr intT zero = fmt_to_int<char>( '0' );
+	intT curC = fmt_to_int<charT>( *fmt );
+	if ( ! std::isdigit( curC ) )
+		throw std::runtime_error( std::string( "Invalid format string: expecting " ) + errorTag );
+
+	while ( curC && std::isdigit( curC ) )
+	{
+		retval = retval * 10 + static_cast<size_t>( curC - zero );
+		++fmt;
+		curC = fmt_to_int<charT>( *fmt );
+	}
+
+	return retval;
+}
+
+
+template <typename charT>
+class fmt_guard
+{
+public:
+	fmt_guard( std::basic_ostream<charT> &out )
+			: _out( out ), _flags( out.flags() ) {}
+	~fmt_guard( void ) { _out.flags( _flags ); }
+
+private:
+	fmt_guard( void ) = delete;
+	fmt_guard( const fmt_guard & ) = delete;
+	fmt_guard &operator=( const fmt_guard & ) = delete;
+
+	std::basic_ostream<charT> &_out;
+	std::ios::fmtflags _flags;
+};
 
 template <typename charT, size_t I, size_t N>
 struct fmt_arg : public fmt_arg<charT, I + 1, N - 1>
@@ -57,59 +106,176 @@ struct fmt_arg : public fmt_arg<charT, I + 1, N - 1>
 };
 
 template <typename charT, size_t I>
-struct fmt_arg<charT, I, 1>
-{
-	template <typename T>
-	static void output( std::basic_ostream<charT> &os, size_t x, const T &args )
-	{
-		if ( x == I )
-		{
-			os << std::get<I>( args );
-			return;
-		}
-		throw std::runtime_error( "Invalid fmt format string: out of range position indicator (missing arguments)" );
-	}
-};
-
-template <typename charT, size_t I>
 struct fmt_arg<charT, I, 0>
 {
 	template <typename T>
-	static void output( std::basic_ostream<charT> &os, size_t x, const T &args )
+	static void output( std::basic_ostream<charT> &, size_t, const T & )
 	{
 		throw std::runtime_error( "Invalid fmt format string: out of range position indicator (missing arguments)" );
 	}
 };
 
-template <typename charT, typename fmtCharT, typename T>
+template <typename charT, typename T>
 void
-fmt_build( std::basic_ostream<charT> &__os, const fmtCharT *__s, const T &__args )
+fmt_process( std::basic_ostream<charT> &os, const charT * &fmt, const T &args )
 {
-	static const fmtCharT __fmtTag = std::char_traits<fmtCharT>::to_char_type( std::char_traits<char>::to_int_type( '%' ) );
+	size_t argIdx = fmt_number( fmt, "argument offset" );
 
-	while ( *__s )
+	typedef typename std::char_traits<charT>::int_type intT;
+	constexpr intT sepTag = fmt_to_int<char>( ',' );
+	constexpr intT widthTag = fmt_to_int<char>( 'w' );
+	constexpr intT baseTag = fmt_to_int<char>( 'b' );
+	constexpr intT upBaseTag = fmt_to_int<char>( 'B' );
+	constexpr intT fillTag = fmt_to_int<char>( 'f' );
+	constexpr intT plusTag = fmt_to_int<char>( '+' );
+	constexpr intT precTag = fmt_to_int<char>( 'p' );
+	constexpr intT alignTag = fmt_to_int<char>( 'a' );
+	constexpr intT alignLeftTag = fmt_to_int<char>( 'l' );
+	constexpr intT alignRightTag = fmt_to_int<char>( 'r' );
+	constexpr intT commentTag = fmt_to_int<char>( '#' );
+	constexpr intT endFmtTag = fmt_to_int<char>( '}' );
+
+	size_t base = 10;
+	int precision = -1;
+	while ( std::char_traits<charT>::to_int_type( *fmt ) == sepTag )
 	{
-		// how to do this properly??
-		if ( std::char_traits<fmtCharT>::eq( *__s, __fmtTag ) )
+		++fmt;
+		bool doBreak = false;
+		switch ( std::char_traits<charT>::to_int_type( *fmt ) )
 		{
-			++__s;
-			typename std::char_traits<charT>::int_type __curC = std::char_traits<charT>::to_int_type( *__s );
+			case widthTag:
+				++fmt;
+				os.width( static_cast<typename std::streamsize>( fmt_number( fmt, "output width size" ) ) );
+				break;
+			case baseTag:
+				++fmt;
+				os.unsetf( std::ios_base::uppercase );
+				base = fmt_number( fmt, "numeric base" );
+				break;
+			case upBaseTag:
+				++fmt;
+				os.setf( std::ios_base::uppercase );
+				base = fmt_number( fmt, "numeric base" );
+				break;
+			case fillTag:
+				++fmt;
+				if ( std::char_traits<charT>::to_int_type( *fmt ) )
+				{
+					os.fill( *fmt );
+					++fmt;
+				}
+				else
+					throw std::runtime_error( "invalid format specifier: end of string encountered as fill character" );
+				break;
+			case plusTag:
+				++fmt;
+				os.setf( std::ios_base::showpos );
+				break;
+			case precTag:
+				++fmt;
+				precision = static_cast<int>( fmt_number( fmt, "digits of precision" ) );
+				break;
+			case alignTag:
+				++fmt;
+				os.unsetf( std::ios_base::adjustfield );
+				switch ( std::char_traits<charT>::to_int_type( *fmt ) )
+				{
+					case alignLeftTag: os.setf( std::ios_base::left ); break;
+					case alignRightTag: os.setf( std::ios_base::right ); break;
+					case 0:
+						throw std::runtime_error( "invalid format specifier: end of string encountered as alignment character" );
+					default:
+						throw std::runtime_error( "invalid format specifier: invalid alignment character" );
+				}
+				break;
 
-			if ( ! std::isdigit( __curC ) )
-				throw std::runtime_error( "Invalid fmt format string: expecting position indicator" );
+			case 0:
+				throw std::runtime_error( "invalid format specifier: missing end tag" );
+				break;
+			case endFmtTag:
+			case commentTag:
+				doBreak = true;
+				break;
+			default:
+				throw std::runtime_error( "invalid format specifier: unknown format specifier" );
+		}
+		if ( doBreak )
+			break;
+	}
 
-			size_t __idx = 0;
-			while ( __curC && std::isdigit( __curC ) )
+	if ( std::char_traits<charT>::to_int_type( *fmt ) == commentTag )
+	{
+		intT curC = std::char_traits<charT>::to_int_type( *fmt );
+		while ( curC && curC != endFmtTag )
+		{
+			++fmt;
+			curC = std::char_traits<charT>::to_int_type( *fmt );
+		}
+	}
+
+	if ( std::char_traits<charT>::to_int_type( *fmt ) != endFmtTag )
+		throw std::runtime_error( "invalid format specifier: missing end tag" );
+
+	++fmt;
+
+	os.unsetf( std::ios_base::basefield );
+	switch ( base )
+	{
+		case 8: os.setf( std::ios_base::oct ); break;
+		case 10: os.setf( std::ios_base::dec ); break;
+		case 16: os.setf( std::ios_base::hex ); break;
+
+		default:
+			throw std::runtime_error( "invalid format specifier: unsupported numeric base specifier" );
+	}
+
+	os.unsetf( std::ios_base::floatfield );
+	if ( precision >= 0 )
+	{
+		os.setf( std::ios_base::fixed );
+		os.precision( precision );
+	}
+	else
+		os.setf( std::ios_base::scientific );
+
+	fmt_arg<charT, 0, std::tuple_size<T>::value>::output( os, argIdx, args );
+}
+
+template <typename charT, typename T>
+void
+fmt_build( std::basic_ostream<charT> &os, const charT *fmt, const T &args )
+{
+	constexpr charT fmtTag = fmt_to_char<charT>( fmt_to_int<char>( '{' ) );
+	constexpr charT fmtEsc = fmt_to_char<charT>( fmt_to_int<char>( '\\' ) );
+
+	while ( *fmt )
+	{
+		if ( *fmt == fmtEsc )
+		{
+			++fmt;
+			if ( *fmt == fmtTag )
 			{
-				__idx *= 10;
-				__idx += ( __curC - std::char_traits<char>::to_int_type( '0' ) );
-				++__s;
+				os << fmtTag;
+				++fmt;
+				continue;
 			}
-			fmt_arg<charT, 0, std::tuple_size<T>::value>::output( __os, __idx, __args );
+			else
+			{
+				os << fmtEsc;
+				continue;
+			}
+		}
+
+		if ( *fmt == fmtTag )
+		{
+			++fmt;
+			fmt_guard<charT> guard( os );
+
+			fmt_process( os, fmt, args );
 		}
 		else
 		{
-			__os << *__s++;
+			os << *fmt++;
 		}
 	}
 }

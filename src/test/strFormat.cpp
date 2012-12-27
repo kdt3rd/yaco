@@ -20,7 +20,20 @@
 // OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#include <format>
+#include <strutil>
+#include <iostream>
+
+
+////////////////////////////////////////
+
+using namespace yaco::str;
+
+static int
+testFormatVoid( void )
+{
+	std::cout << format( "Hello, World!" ) << std::endl;
+	return 0;
+}
 
 
 ////////////////////////////////////////
@@ -29,8 +42,20 @@
 static int
 testFormatSimple( void )
 {
-//	std::string xxx = format( "Hello {0,f w10}", 3.1415 );
-	std::cout << format( "Hello {0,f w10}", 3.1415 ) << std::endl;
+//	std::string xxx = format( "Hello {0,f ,w10}", 3.1415 );
+	std::cout << format( "Hello {0,f ,w20}", 3.1415 ) << std::endl;
+	return 0;
+}
+
+
+////////////////////////////////////////
+
+
+static int
+testReorderedSimple( void )
+{
+//	std::string xxx = format( "Hello {0,f ,w10}", 3.1415 );
+	std::cout << format( "Hello, {1,#comment}: pi is approximately {0,+,p3}", 22.0/7.0, "world!" ) << std::endl;
 	return 0;
 }
 
@@ -41,5 +66,18 @@ testFormatSimple( void )
 int
 main( int argc, char *argv[] )
 {
-	testFormatSimple();
+	int retval = 0;
+	try
+	{
+		retval += testFormatVoid();
+		retval += testFormatSimple();
+		retval += testReorderedSimple();
+	}
+	catch ( std::exception &e )
+	{
+		std::cout << "ERROR: " << e.what() << std::endl;
+		return -1;
+	}
+
+	return retval;
 }

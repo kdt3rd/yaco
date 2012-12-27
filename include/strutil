@@ -29,6 +29,7 @@
 #include <locale>
 #include <algorithm>
 #include <functional>
+#include <stdexcept>
 
 #include "__fmt"
 
@@ -39,20 +40,48 @@ namespace yaco
 namespace str
 {
 
+template <class charT>
+class conststr
+{
+public:
+	template <std::size_t N>
+	constexpr conststr( const charT (&s)[N] ) : _str( s ), _sz( N - 1 ) {}
+
+	constexpr charT operator[]( std::size_t i ) { return _str[i]; }
+	constexpr charT at( std::size_t i ) { return i <= _sz ? _str[i] : throw std::out_of_range( "" ); }
+	constexpr std::size_t size( void ) { return _sz; }
+
+	constexpr charT *begin( void ) { return _str; };
+	constexpr charT *end( void ) { return _str + _sz + 1; }
+
+	conststr( void ) = delete;
+
+private:
+	const charT *_str;
+	std::size_t _sz;
+};
+
+// @todo: how to handle different character types and codecvt conversion?
+//
+// In theory, we have the locale in the output stream (os.getloc()) and
+// can get the appropriate codecvt type, but then need to do the
+// same on any string arguments and such...
+// also need to take into account some form of gettext to
+// retrieve the appropriate translation...
 template <class charT, typename... Args >
 std::basic_string<charT>
-format( const charT *__fmt, const Args&... args )
+format( const charT *fmt, const Args&... args )
 {
-	std::basic_stringstream<charT> __tmp;
-	__priv::fmt_build( __tmp, __fmt, std::tie(args...) );
-	return __tmp.str();
+	std::basic_stringstream<charT> tmp;
+	__priv::fmt_build( tmp, fmt, std::tie(args...) );
+	return tmp.str();
 }
 
-template <typename charT, typename fmtCharT, typename... Args >
+template <typename charT, typename... Args >
 void
-format( std::basic_ostream<charT> &__os, const fmtCharT *__fmt, const Args&... args )
+format( std::basic_ostream<charT> &os, const charT *fmt, const Args&... args )
 {
-	__priv::fmt_build( __os, __fmt, std::tie(args...) );
+	__priv::fmt_build( os, fmt, std::tie(args...) );
 }
 
 // split on any of the characters in the separator string
