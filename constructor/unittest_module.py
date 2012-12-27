@@ -19,4 +19,5 @@ def UnitTestExe( *args ):
     outPath = os.path.join( GetBuildRootDir(), 'test_output', p + '_' + name )
     t = generator.AddTarget( out=outPath, gen_type='test', short=name, dep=[ ut ],
                              rule=_testExeRule )
+    generator.AddToAliasTarget( 'test/' + name, ut )
     generator.AddToAliasTarget( 'test', t )
