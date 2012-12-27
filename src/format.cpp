@@ -24,6 +24,36 @@
 #include <iomanip>
 #include <format>
 
+
+////////////////////////////////////////
+
+
+namespace {
+
+int
+parse_number( const char * &fmt, const char *end )
+{
+	int n = 0;
+	int digits = 0;
+
+	while ( fmt != end )
+	{
+		if ( !isdigit( *fmt ) )
+			break;
+
+		n = n * 10 + ( *fmt - '0' );
+		digits++;
+		fmt++;
+	}
+
+	if ( digits == 0 )
+		throw std::runtime_error( "expected number" );
+
+	return n;
+}
+
+} // empty namespace
+
 ////////////////////////////////////////
 
 format_specifier::format_specifier( const char * &fmt, const char *end )
@@ -154,30 +184,6 @@ format_specifier::begin( const char * &fmt, const char *end )
 		++fmt;
 
 	return fmt != end;
-}
-
-////////////////////////////////////////
-
-int
-format_specifier::parse_number( const char * &fmt, const char *end )
-{
-	int n = 0;
-	int digits = 0;
-
-	while ( fmt != end )
-	{
-		if ( !isdigit( *fmt ) )
-			break;
-
-		n = n * 10 + ( *fmt - '0' );
-		digits++;
-		fmt++;
-	}
-
-	if ( digits == 0 )
-		throw std::runtime_error( "expected number" );
-
-	return n;
 }
 
 ////////////////////////////////////////

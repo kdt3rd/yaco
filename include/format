@@ -132,9 +132,6 @@ public:
 	void apply( std::ostream &out );
 
 	static bool begin( const char * &fmt, const char *end );
-
-private:
-	static int parse_number( const char * &fmt, const char *end );
 };
 
 ////////////////////////////////////////
