@@ -52,6 +52,30 @@ testFormatSimple( void )
 
 
 static int
+testFormatSimple2( const char *fmt )
+{
+//	std::string xxx = format( "Hello {0,f ,w10}", 3.1415 );
+	std::cout << format( fmt ) << std::endl;
+	return 0;
+}
+
+
+////////////////////////////////////////
+
+
+static int
+testFormatSimpleStr( void )
+{
+//	std::string xxx = format( "Hello {0,f ,w10}", 3.1415 );
+	std::cout << format( std::string( "Hello {0,f ,w20}" ), 3.1415 ) << std::endl;
+	return 0;
+}
+
+
+////////////////////////////////////////
+
+
+static int
 testReorderedSimple( void )
 {
 //	std::string xxx = format( "Hello {0,f ,w10}", 3.1415 );
@@ -71,6 +95,8 @@ main( int argc, char *argv[] )
 	{
 		retval += testFormatVoid();
 		retval += testFormatSimple();
+		retval += testFormatSimple2( "Hello, world!" );
+		retval += testFormatSimpleStr();
 		retval += testReorderedSimple();
 	}
 	catch ( std::exception &e )

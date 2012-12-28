@@ -45,13 +45,16 @@ class conststr
 public:
 	template <std::size_t N>
 	constexpr conststr( const charT (&s)[N] ) : _str( s ), _sz( N - 1 ) {}
+	constexpr conststr( const charT *s, std::size_t N ) : _str( s ), _sz( N - 1 ) {}
+	constexpr conststr( const std::basic_string<charT> &s ) : _str( s.data() ), _sz( s.size() ) {}
+	constexpr conststr( const char *s ) : _str( s ), _sz( strlen( s ) ) {}
 
-	constexpr charT operator[]( std::size_t i ) { return _str[i]; }
-	constexpr charT at( std::size_t i ) { return i <= _sz ? _str[i] : throw std::out_of_range( "" ); }
+	constexpr const charT operator[]( std::size_t i ) { return _str[i]; }
+	constexpr const charT at( std::size_t i ) { return i <= _sz ? _str[i] : throw std::out_of_range( "" ); }
 	constexpr std::size_t size( void ) { return _sz; }
 
-	constexpr charT *begin( void ) { return _str; };
-	constexpr charT *end( void ) { return _str + _sz + 1; }
+	constexpr const charT *begin( void ) { return _str; };
+	constexpr const charT *end( void ) { return _str + _sz + 1; }
 
 	conststr( void ) = delete;
 
@@ -67,18 +70,103 @@ private:
 // same on any string arguments and such...
 // also need to take into account some form of gettext to
 // retrieve the appropriate translation...
-template <class charT, typename... Args >
-std::basic_string<charT>
-format( const charT *fmt, const Args&... args )
+//
+// Not sure why you can't template this ala:
+//template <class charT, size_t N, typename... Args >
+//std::basic_string<charT>
+//format( const charT (&fmt)[N], const Args&... args )
+//{
+//	typedef conststr<charT> fmt_str_type;
+//	std::basic_stringstream<charT> tmp;
+//	__priv::fmt_build( tmp, fmt_str_type( fmt ), std::tie(args...) );
+//	return tmp.str();
+//}
+//
+// it is an error in template deduction...
+
+template <size_t N, typename... Args >
+std::string
+format( const char (&fmt)[N], const Args&... args )
 {
-	std::basic_stringstream<charT> tmp;
+	std::ostringstream tmp;
+	__priv::fmt_build( tmp, conststr<char>( fmt ), std::tie(args...) );
+	return tmp.str();
+}
+
+template <size_t N, typename... Args >
+std::wstring
+format( const wchar_t (&fmt)[N], const Args&... args )
+{
+	std::wostringstream tmp;
+	__priv::fmt_build( tmp, conststr<wchar_t>( fmt ), std::tie(args...) );
+	return tmp.str();
+}
+
+template <size_t N, typename... Args >
+std::u16string
+format( const char16_t (&fmt)[N], const Args&... args )
+{
+	std::basic_ostringstream<char16_t> tmp;
+	__priv::fmt_build( tmp, conststr<char16_t>( fmt ), std::tie(args...) );
+	return tmp.str();
+}
+
+template <size_t N, typename... Args >
+std::u32string
+format( const char32_t (&fmt)[N], const Args&... args )
+{
+	std::basic_ostringstream<char32_t> tmp;
+	__priv::fmt_build( tmp, conststr<char32_t>( fmt ), std::tie(args...) );
+	return tmp.str();
+}
+
+template <typename... Args >
+std::string
+format( const std::string &fmt, const Args&... args )
+{
+	std::ostringstream tmp;
 	__priv::fmt_build( tmp, fmt, std::tie(args...) );
 	return tmp.str();
 }
 
+template <typename... Args >
+std::wstring
+format( const std::wstring &fmt, const Args&... args )
+{
+	std::wostringstream tmp;
+	__priv::fmt_build( tmp, fmt, std::tie(args...) );
+	return tmp.str();
+}
+
+template <typename... Args >
+std::u16string
+format( const std::u16string &fmt, const Args&... args )
+{
+	std::basic_ostringstream<char16_t> tmp;
+	__priv::fmt_build( tmp, fmt, std::tie(args...) );
+	return tmp.str();
+}
+
+template <typename... Args >
+std::u32string
+format( const std::u32string &fmt, const Args&... args )
+{
+	std::basic_ostringstream<char32_t> tmp;
+	__priv::fmt_build( tmp, fmt, std::tie(args...) );
+	return tmp.str();
+}
+
+template <typename charT, std::size_t N, typename... Args >
+void
+output( std::basic_ostream<charT> &os, const charT (&fmt)[N], const Args&... args )
+{
+	typedef conststr<charT> fmt_str_type;
+	__priv::fmt_build( os, fmt_str_type( fmt ), std::tie(args...) );
+}
+
 template <typename charT, typename... Args >
 void
-format( std::basic_ostream<charT> &os, const charT *fmt, const Args&... args )
+output( std::basic_ostream<charT> &os, const std::basic_string<charT> &fmt, const Args&... args )
 {
 	__priv::fmt_build( os, fmt, std::tie(args...) );
 }
