@@ -1,9 +1,3 @@
-/// -*- mode: C++ -*-
-///
-/// @file log
-///
-/// @author Kimball Thurston
-
 //
 // Copyright (c) 2012 Kimball Thurston
 //
@@ -118,3 +112,10 @@ private:
 };
 
 } // namespace yaco
+
+
+////////////////////////////////////////
+// Local Variables:
+// mode: C++
+// End:
+// vim:ft=cpp:

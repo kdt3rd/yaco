@@ -1,9 +1,3 @@
-/// -*- mode: C++ -*-
-///
-/// @file variadic
-///
-/// @author Kimball Thurston
-
 //
 // Copyright (c) 2012 Kimball Thurston
 //
@@ -89,6 +83,7 @@ call_func_from_tuple( R (*f)(FuncArgs...), const TupleType &args )
 
 
 ////////////////////////////////////////
-
-
-
+// Local Variables:
+// mode: C++
+// End:
+// vim:ft=cpp:

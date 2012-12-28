@@ -1,9 +1,3 @@
-/// -*- mode: C++ -*-
-///
-/// @file mutexext
-///
-/// @author Kimball Thurston
-
 //
 // Copyright (c) 2012 Kimball Thurston
 //
@@ -59,4 +53,12 @@ private:
 
 	mutex_type &__m;
 };
+
 }
+
+
+////////////////////////////////////////
+// Local Variables:
+// mode: C++
+// End:
+// vim:ft=cpp:
