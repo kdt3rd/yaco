@@ -12,6 +12,7 @@ if sys.platform.startswith( 'linux' ):
     gpp = FindExecutable( "g++" )
     cpp = FindExecutable( "clang++" )
     if cpp is not None and generator.GetEnvVar( 'CXX' ) is None:
+        sys.stdout.write( " Using compiler: %s\n" % cpp )
         generator.DefineGlobal( 'CC', FindExecutable( "clang" ) )
         generator.DefineGlobal( 'CXX', cpp )
         generator.DefineGlobal( 'LD', cpp )
@@ -19,6 +20,7 @@ if sys.platform.startswith( 'linux' ):
         generator.DefineGlobal( 'WARN', [ "-Weverything", "-Wno-c++98-compat" ] )
         generator.DefineGlobal( 'LDFLAGS', [ "-lc++" ] )
     else:
+        sys.stdout.write( " Using compiler: %s\n" % gpp )
         generator.DefineGlobal( 'CC', FindExecutable( "gcc" ) )
         generator.DefineGlobal( 'CXX', gpp )
         generator.DefineGlobal( 'LD', gpp )
