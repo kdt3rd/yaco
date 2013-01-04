@@ -5,6 +5,7 @@ import string
 
 _generatorFiles = []
 _envVars = {}
+_envVarIsExe = {}
 _globalVars = {}
 _rules = []
 _defaultTargets = {}
@@ -126,7 +127,7 @@ class Target(object):
         return self.outputs
 
     pass
-    
+
 def Var( n ):
     return '$' + n
 
@@ -136,10 +137,16 @@ def GetOutputVarName():
 def GetInputListVarName():
     return "$in"
 
-def DefineEnvVar( n ):
+def DefineEnvVar( n, isExe ):
     global _envVars
+    global _envVarIsExe
     _envVars[n] = None
+    _envVarIsExe[n] = isExe
 
+def GetEnvVar( n ):
+    global _envVars
+    return _envVars.get( n )
+    
 def DefineGlobal( v, x ):
     global _globalVars
     _globalVars[v] = x
@@ -183,10 +190,14 @@ def AddToVar( v, x ):
 
 def PopulateVarsFromEnv():
     global _envVars
+    global _envVarIsExe
     for k, v in _envVars.iteritems():
         t = os.environ.get( k )
         if t is not None:
-            _envVars[k] = t
+            if _envVarIsExe[k]:
+                _envVars[k] = FindExecutable( t )
+            else:
+                _envVars[k] = t
 
 def AddRule( **rargs ):
     global _rules
@@ -327,7 +338,7 @@ def WriteBuildFiles( root, build_dir, build_config ):
     if len(_defaultTargets) > 0:
         out.write( "\ndefault" )
         for k, v in _defaultTargets.iteritems():
-            out.write( ' ' )            
+            out.write( ' ' )
             out.write( k )
 
     out.write( "\n\nrule regen_config\n" )

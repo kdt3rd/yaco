@@ -154,10 +154,10 @@ def ProcessBuildTree():
     _cur_src_dir = _source_root_dir
     _cur_rel_src_dir = ""
     _source_file( 'config.py' )
-    _source_file( 'build.py' )
     generator.AddConfigureFile( 'config.py' )
-    generator.AddConfigureFile( 'build.py' )
     generator.PopulateVarsFromEnv()
+    _source_file( 'build.py' )
+    generator.AddConfigureFile( 'build.py' )
     _writeBuildFiles()
 
 class Generator(dict):
