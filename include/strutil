@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <functional>
 #include <stdexcept>
+#include <cstring>
 
 #include "__fmt"
 
@@ -47,7 +48,7 @@ public:
 	constexpr conststr( const charT (&s)[N] ) : _str( s ), _sz( N - 1 ) {}
 	constexpr conststr( const charT *s, std::size_t N ) : _str( s ), _sz( N - 1 ) {}
 	constexpr conststr( const std::basic_string<charT> &s ) : _str( s.data() ), _sz( s.size() ) {}
-	constexpr conststr( const char *s ) : _str( s ), _sz( strlen( s ) ) {}
+	constexpr conststr( const char *s ) : _str( s ), _sz( std::strlen( s ) ) {}
 
 	constexpr const charT operator[]( std::size_t i ) { return _str[i]; }
 	constexpr const charT at( std::size_t i ) { return i <= _sz ? _str[i] : throw std::out_of_range( "" ); }
