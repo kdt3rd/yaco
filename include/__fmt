@@ -80,7 +80,11 @@ private:
 	fmt_guard &operator=( const fmt_guard & ) = delete;
 
 	std::basic_ostream<charT> &_out;
-	std::ios::fmtflags _flags;
+	union 
+	{
+		std::ios::fmtflags _flags;
+		char __align_buf[alignof(std::basic_ostream<charT> &)];
+	};
 };
 
 template <typename charT, size_t I, size_t N>
