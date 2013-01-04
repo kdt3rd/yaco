@@ -1,4 +1,4 @@
 
-Library( 'yaco', Compile( 'yaco.cpp', 'format.cpp' ) )
+Library( 'yaco', Compile( 'yaco.cpp', 'region.cpp' ) )
 
 SubDir( 'test' )
