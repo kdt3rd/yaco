@@ -131,6 +131,9 @@ def GetCurrentBinaryDir():
     return _cur_bin_dir
 
 def FindExecutable( exe ):
+    if exe is None:
+        return None
+
     is_exe = lambda fpath: os.path.isfile( fpath ) and os.access( fpath, os.X_OK )
 
     fpath, fname = os.path.split( exe )
@@ -155,7 +158,6 @@ def ProcessBuildTree():
     _cur_rel_src_dir = ""
     _source_file( 'config.py' )
     generator.AddConfigureFile( 'config.py' )
-    generator.PopulateVarsFromEnv()
     _source_file( 'build.py' )
     generator.AddConfigureFile( 'build.py' )
     _writeBuildFiles()

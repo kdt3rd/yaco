@@ -5,7 +5,6 @@ import string
 
 _generatorFiles = []
 _envVars = {}
-_envVarIsExe = {}
 _globalVars = {}
 _rules = []
 _defaultTargets = {}
@@ -139,14 +138,15 @@ def GetInputListVarName():
 
 def DefineEnvVar( n, isExe ):
     global _envVars
-    global _envVarIsExe
-    _envVars[n] = None
-    _envVarIsExe[n] = isExe
+    t = os.environ.get( n )
+    if isExe:
+        t = FindExecutable( t )
+    _envVars[n] = t
 
 def GetEnvVar( n ):
     global _envVars
     return _envVars.get( n )
-    
+
 def DefineGlobal( v, x ):
     global _globalVars
     _globalVars[v] = x
@@ -187,17 +187,6 @@ def AddToVar( v, x ):
                 vl = vl + x
             else:
                 vl.append( x )
-
-def PopulateVarsFromEnv():
-    global _envVars
-    global _envVarIsExe
-    for k, v in _envVars.iteritems():
-        t = os.environ.get( k )
-        if t is not None:
-            if _envVarIsExe[k]:
-                _envVars[k] = FindExecutable( t )
-            else:
-                _envVars[k] = t
 
 def AddRule( **rargs ):
     global _rules
