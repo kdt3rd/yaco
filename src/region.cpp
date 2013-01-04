@@ -25,6 +25,8 @@
 #include <list>
 #include <stdexcept>
 #include <iostream>
+#include <functional>
+#include <algorithm>
 
 
 ////////////////////////////////////////
@@ -39,7 +41,11 @@ struct edge
 {
 	region::value_type left, right, y;
 	int inA, inB;
-	bool out;
+	union 
+	{
+		bool out;
+		char __align_buf[alignof(region::value_type)];
+	};
 	edge( region::value_type l, region::value_type r, region::value_type p,
 		  int a, int b, bool o )
 			: left( l ), right( r ), y( p ), inA( a ), inB( b ), out( o )
