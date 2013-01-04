@@ -54,7 +54,7 @@ public:
 	constexpr const charT at( std::size_t i ) { return i <= _sz ? _str[i] : throw std::out_of_range( "" ); }
 	constexpr std::size_t size( void ) { return _sz; }
 
-	constexpr const charT *begin( void ) { return _str; };
+	constexpr const charT *begin( void ) { return _str; }
 	constexpr const charT *end( void ) { return _str + _sz + 1; }
 
 	conststr( void ) = delete;
