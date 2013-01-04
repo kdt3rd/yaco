@@ -7,10 +7,12 @@ _testExeRule = generator.AddRule( tag='run_test', cmd=_testExeStatus, desc="TEST
 
 def UnitTestExe( *args ):
     name, ext = os.path.splitext( args[0] )
+    exename = name
     if len(ext) == 0:
         ut = OptExecutable( args )
     else:
-        ut = OptExecutable( name, Compile( args[0] ), args[1:] )
+        exename = 'test_' + name
+        ut = OptExecutable( exename, Compile( args[0] ), args[1:] )
 
     cd = GetCurrentSourceRelDir()
     p = string.replace( cd, '/', '_' )
