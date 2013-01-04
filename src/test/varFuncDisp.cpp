@@ -44,7 +44,7 @@ test_func_2( const char *, const char * )
 }
 
 int
-main( int argc, const char *argv[] )
+main( int /*argc*/, char */*argv*/[] )
 {
 	auto xxx = std::make_tuple();
 	auto xxx1 = std::make_tuple( "foo" );

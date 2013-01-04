@@ -88,7 +88,7 @@ testReorderedSimple( void )
 
 
 int
-main( int argc, char *argv[] )
+main( int /*argc*/, char */*argv*/[] )
 {
 	int retval = 0;
 	try
