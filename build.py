@@ -1,2 +1,3 @@
 
+Include( "include" )
 SubDir( "src" )
