@@ -43,7 +43,7 @@ static int
 testFormatSimple( void )
 {
 //	std::string xxx = format( "Hello {0,f ,w10}", 3.1415 );
-	std::cout << format( "Hello {0,f ,w20}", 3.1415 ) << std::endl;
+	std::cout << format( "FormatSimple: {0,f ,w20}", 3.1415 ) << std::endl;
 	return 0;
 }
 
@@ -67,7 +67,7 @@ static int
 testFormatSimpleStr( void )
 {
 //	std::string xxx = format( "Hello {0,f ,w10}", 3.1415 );
-	std::cout << format( std::string( "Hello {0,f ,w20}" ), 3.1415 ) << std::endl;
+	std::cout << format( std::string( "FormatSimpleStr: {0,f ,w20}" ), 3.1415 ) << std::endl;
 	return 0;
 }
 
@@ -79,7 +79,40 @@ static int
 testReorderedSimple( void )
 {
 //	std::string xxx = format( "Hello {0,f ,w10}", 3.1415 );
-	std::cout << format( "Hello, {1,#comment}: pi is approximately {0,+,p3}", 22.0/7.0, "world!" ) << std::endl;
+	std::cout << format( "ReorderedSimple: {1,#comment}: pi is approximately {0,+,p3}", 22.0/7.0, "world!" ) << std::endl;
+	return 0;
+}
+
+
+////////////////////////////////////////
+
+
+static int
+testOutputSimple( void )
+{
+	output( std::cout, "OutputSimple: {0,f ,w10}\n", 3.1415 );
+	return 0;
+}
+
+
+////////////////////////////////////////
+
+
+static int
+testOutputSimple2( const char *fmt )
+{
+	output( std::cout, fmt, 3.1415 );
+	return 0;
+}
+
+
+////////////////////////////////////////
+
+
+static int
+testOutputSimpleStr( void )
+{
+	output( std::cout, std::string( "OutputSimpleStr: {0,f ,w10}\n" ), 3.1415 );
 	return 0;
 }
 
@@ -95,9 +128,12 @@ main( int /*argc*/, char */*argv*/[] )
 	{
 		retval += testFormatVoid();
 		retval += testFormatSimple();
-		retval += testFormatSimple2( "Hello, world!" );
+		retval += testFormatSimple2( "FormatSimple2:" );
 		retval += testFormatSimpleStr();
 		retval += testReorderedSimple();
+		retval += testOutputSimple();
+		retval += testOutputSimple2( "OutputSimple2: {0,f ,w10}\n" );
+		retval += testOutputSimpleStr();
 	}
 	catch ( std::exception &e )
 	{
