@@ -41,14 +41,16 @@ namespace math
 ///
 /// NB: This is a region defined using integers, primarily intended
 /// for use in dealing with pixel coverage.
-/// A more generic volume class would probably deal with floating point
+/// A more generic volume class would probably deal with floating point.
+///
+/// Until then, this remains NOT templated.
 class region
 {
 public:
+	typedef int value_type;
+
 	struct infinite_tag_t {};
 	constexpr static infinite_tag_t inf = infinite_tag_t();
-
-	typedef int value_type;
 
 	/// @brief Create an empty box
 	constexpr region( void ) : myL( 0 ), myR( -1 ), myB( 0 ), myT( -1 ) {}
