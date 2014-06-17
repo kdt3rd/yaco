@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "_y_config"
+#include "impl/config"
 
 namespace yaco
 {
@@ -30,22 +30,7 @@ namespace yaco
 namespace file
 {
 
-std::pair<std::string, std::string> split_path( const std::string &path );
-std::string basename( const std::string &path );
-std::string dirname( const std::string &path );
-
-std::string extension( const std::string &filename );
-
-std::string cleanup( const std::string &file );
 std::string readlink( const std::string &file, const std::string &current );
-
-} // namespace file
-
-namespace file_sequence
-{
-
-std::pair<std::string, int> pattern( const std::string &filename );
-bool matches( int &outframe, const std::string &name, const std::string &pattern );
 
 }
 

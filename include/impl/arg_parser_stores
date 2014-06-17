@@ -120,7 +120,7 @@ protected:
 		if ( ! argv[curarg] )
 			throw_invalid_argument_index( curarg );
 
-		if ( ! allowEmpty && argv[curarg] == '\0' )
+		if ( ! allowEmpty && *(argv[curarg]) == '\0' )
 			throw_missing_option( " empty values not allowed" );
 
 		return std::string( argv[curarg] );

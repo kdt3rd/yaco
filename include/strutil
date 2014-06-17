@@ -32,7 +32,7 @@
 #include <cstring>
 #include <type_traits>
 
-#include "__fmt"
+#include "impl/fmt_priv"
 
 namespace yaco
 {

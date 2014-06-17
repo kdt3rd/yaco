@@ -27,6 +27,7 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "config"
 
 ////////////////////////////////////////
 

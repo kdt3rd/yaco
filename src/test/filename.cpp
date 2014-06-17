@@ -1,5 +1,7 @@
+// argParser.cpp -*- C++ -*-
+
 //
-// Copyright (c) 2013 Kimball Thurston
+// Copyright (c) 2014 Kimball Thurston
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -20,39 +22,35 @@
 // OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#pragma once
-
-#include <cstdint>
+#include <filename>
+#include <iostream>
 
 
 ////////////////////////////////////////
 
 
-namespace yaml
+int
+main( int argc, char *argv[] )
 {
-
-class node
-{
-public:
-	enum class type : std::int8_t
+	try
 	{
-		SCALAR = 0,
-		SEQUENCE = 1,
-		MAPPING = 2,
-		NIL = 3,
-	};
+		std::string path;
+		if ( argc > 1 )
+			path = argv[1];
+		else
+			path = "foo_001234.tiff";
 
-	node( void );
-	~node( void );
-
-	union 
+		auto p = yaco::sequence_pattern( path );
+		std::cout << "Input path: " << path << std::endl;
+		std::cout << "Output pattern: " << p.first << std::endl;
+		std::cout << "Output framenumber: " << p.second << std::endl;
+	}
+	catch ( std::exception &e )
 	{
-		std::string myScalar;
-		std::vector<std::pair<std::string, node>> myMapping;
-		std::vector<node> mySequence;
-	};
-	type myType;
-};
+		std::cerr << "ERROR: " << e.what() << std::endl;
+		return -1;
+	}
 
-} // namespace include
+	return 0;
+}
 

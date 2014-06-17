@@ -28,7 +28,7 @@
 #include <vector>
 #include <iosfwd>
 
-#include "../_y_config"
+#include "../impl/config"
 
 namespace yaco
 {
@@ -59,18 +59,18 @@ public:
 	/// @brief Create an infinite bounding box
 	constexpr region( infinite_tag_t ) : myL( std::numeric_limits<value_type>::min() ), myR( std::numeric_limits<value_type>::max() ), myB( std::numeric_limits<value_type>::min() ), myT( std::numeric_limits<value_type>::max() ) {}
 
-	constexpr value_type left( void ) { return myL; }
-	constexpr value_type right( void ) { return myR; }
-	constexpr value_type bottom( void ) { return myB; }
-	constexpr value_type top( void ) { return myT; }
+	constexpr value_type left( void ) const { return myL; }
+	constexpr value_type right( void ) const { return myR; }
+	constexpr value_type bottom( void ) const { return myB; }
+	constexpr value_type top( void ) const { return myT; }
 
-	constexpr value_type offset_x( void ) { return myL; }
-	constexpr value_type offset_y( void ) { return myB; }
+	constexpr value_type offset_x( void ) const { return myL; }
+	constexpr value_type offset_y( void ) const { return myB; }
 
 	/// NB: for infinite regions, this will return 0
-	constexpr value_type size_x( void ) { return myR - myL + 1; }
+	constexpr value_type size_x( void ) const { return myR - myL + 1; }
 	/// NB: for infinite regions, this will return 0
-	constexpr value_type size_y( void ) { return myT - myB + 1; }
+	constexpr value_type size_y( void ) const { return myT - myB + 1; }
 
 	void clear( void ) { myL = myB = 0; myR = myT = -1; }
 	void reset( infinite_tag_t );
@@ -82,19 +82,19 @@ public:
 	/// Leaves left, bottom (offset) alone
 	void set_size( int sx, int sy );
 
-	constexpr bool empty( void ) { return myR < myL || myT < myB; }
-	constexpr bool infinite( void ) { return infinite_x() || infinite_y(); }
-	constexpr bool infinite_x( void ) { return infinite_l() || infinite_r(); }
-	constexpr bool infinite_y( void ) { return infinite_b() || infinite_t(); }
-	constexpr bool infinite_l( void ) { return myL == std::numeric_limits<value_type>::min(); }
-	constexpr bool infinite_r( void ) { return myR == std::numeric_limits<value_type>::max(); }
-	constexpr bool infinite_b( void ) { return myB == std::numeric_limits<value_type>::min(); }
-	constexpr bool infinite_t( void ) { return myT == std::numeric_limits<value_type>::max(); }
+	constexpr bool empty( void ) const { return myR < myL || myT < myB; }
+	constexpr bool infinite( void ) const { return infinite_x() || infinite_y(); }
+	constexpr bool infinite_x( void ) const { return infinite_l() || infinite_r(); }
+	constexpr bool infinite_y( void ) const { return infinite_b() || infinite_t(); }
+	constexpr bool infinite_l( void ) const { return myL == std::numeric_limits<value_type>::min(); }
+	constexpr bool infinite_r( void ) const { return myR == std::numeric_limits<value_type>::max(); }
+	constexpr bool infinite_b( void ) const { return myB == std::numeric_limits<value_type>::min(); }
+	constexpr bool infinite_t( void ) const { return myT == std::numeric_limits<value_type>::max(); }
 
-	constexpr bool equal( const region &o ) { return *this == o; }
-	constexpr bool operator==( const region &o ) { return myL == o.myL && myR == o.myR && myB == o.myB && myT == o.myT; }
-	constexpr bool operator!=( const region &o ) { return !( *this == o ); }
-	constexpr bool operator<( const region &o )
+	constexpr bool equal( const region &o ) const { return *this == o; }
+	constexpr bool operator==( const region &o ) const { return myL == o.myL && myR == o.myR && myB == o.myB && myT == o.myT; }
+	constexpr bool operator!=( const region &o ) const { return !( *this == o ); }
+	constexpr bool operator<( const region &o ) const
 	{
 		return ( ( bottom() < o.bottom() ) ||
 				 ( bottom() == o.bottom() && left() < o.left() ) ||
@@ -103,12 +103,12 @@ public:
 	}
 
 	/// @brief returns true if this region is inside the provided region
-	constexpr bool inside( const region &o ) { return left() >= o.left() && right() <= o.right() && bottom() >= o.bottom() && top() <= o.top(); }
-	constexpr bool intersects( const region &o ) { return left() <= o.right() && right() >= o.left() && bottom() <= o.top() && top() >= o.bottom(); }
+	constexpr bool inside( const region &o ) const { return left() >= o.left() && right() <= o.right() && bottom() >= o.bottom() && top() <= o.top(); }
+	constexpr bool intersects( const region &o ) const { return left() <= o.right() && right() >= o.left() && bottom() <= o.top() && top() >= o.bottom(); }
 
-	constexpr bool contains_x( value_type x ) { return myL <= x && x <= myR; }
-	constexpr bool contains_y( value_type y ) { return myB <= y && y <= myT; }
-	constexpr bool contains( value_type x, value_type y ) { return contains_x( x ) && contains_y( y ); }
+	constexpr bool contains_x( value_type x ) const { return myL <= x && x <= myR; }
+	constexpr bool contains_y( value_type y ) const { return myB <= y && y <= myT; }
+	constexpr bool contains( value_type x, value_type y ) const { return contains_x( x ) && contains_y( y ); }
 
 	void intersect( const region &o );
 	void merge( const region &o );

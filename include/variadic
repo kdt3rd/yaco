@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "_y_config"
+#include "impl/config"
 
 #include <cstddef>
 #include <tuple>
