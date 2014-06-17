@@ -46,7 +46,7 @@ class conststr
 {
 public:
 	typedef typename std::enable_if<std::is_integral<charT>::value, charT>::type type;
-	template <size_t N>
+	template <std::size_t N>
 	constexpr conststr( const type (&s)[N] ) : _str( s ), _sz( N - 1 ) {}
 	constexpr conststr( const type *s, std::size_t N ) : _str( s ), _sz( N - 1 ) {}
 	constexpr conststr( const std::basic_string<type> &s ) : _str( s.data() ), _sz( s.size() ) {}
@@ -244,13 +244,13 @@ icompare( const std::basic_string<charT, traitsT, allocT> &__a,
 //	true lexicographical compare, otherwise it'll just be comparing
 //	the lower case versions
 
-	size_t __lhs = __a.size();
-    size_t __rhs = __b.size();
+	std::size_t __lhs = __a.size();
+    std::size_t __rhs = __b.size();
 	std::locale __l;
 
 	const charT *__aP = __a.data();
 	const charT *__bP = __b.data();
-	for ( size_t __n = std::min( __lhs, __rhs ); __n; --__n, ++__aP, ++__bP )
+	for ( std::size_t __n = std::min( __lhs, __rhs ); __n; --__n, ++__aP, ++__bP )
 	{
 		charT __aI = std::tolower( *__aP, __l );
 		charT __bI = std::tolower( *__bP, __l );
