@@ -128,66 +128,6 @@ extension( const String &filename )
 		return String();
 	return filename.substr( lastDot + 1 );
 }
-
-template <typename String>
-std::pair<String, int64_t>
-sequence_pattern( const String &filename, typename String::size_type extpos = String::npos )
-{
-	typedef typename String::size_type size_type;
-	typedef typename String::value_type charT;
-
-	if ( filename.empty() )
-		return std::make_pair( String(), int64_t(-1) );
-
-	size_type lastDot = extpos;
-	if ( lastDot == String::npos )
-		lastDot = filename.find_last_of( charT( '.' ) );
-
-	size_type frameStart = String::npos;
-	size_type frameEnd = String::npos;
-
-	auto ri = filename.rbegin();
-	auto re = filename.rend();
-	frameEnd = ( lastDot == String::npos ? filename.size() : lastDot ) - 1;
-	if ( lastDot != String::npos )
-	{
-		for ( size_type sz = filename.size(); lastDot != sz && ri != re; ++lastDot )
-			++ri;
-	}
-
-	while ( ri != re )
-	{
-		if ( std::isdigit( *ri ) )
-			break;
-
-		--frameEnd;
-		++ri;
-	}
-
-	if ( ri == re )
-		return std::make_pair( filename, int64_t(-1) );
-
-	int zero = __priv::fmt_to_int<charT>( '0' );
-	int dig = __priv::fmt_to_int<charT>( (*ri) );
-	int64_t frm = dig - zero;
-	int64_t scale = 10;
-	frameStart = frameEnd;
-	++ri;
-	while ( ri != re && std::isdigit( *ri ) )
-	{
-		dig = __priv::fmt_to_int<charT>( (*ri) ) - zero;
-		frm += static_cast<int64_t>( dig ) * scale;
-		scale *= 10;
-		--frameStart;
-		++ri;
-	}
-
-	String rval = filename;
-	for ( ; frameStart <= frameEnd; ++frameStart )
-		rval[frameStart] = charT( '#' );
-
-	return std::make_pair( std::move( rval ), frm );
-}
 	
 } // namespace yaco
 

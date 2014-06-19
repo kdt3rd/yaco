@@ -22,8 +22,8 @@
 // OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#include <filename>
 #include <iostream>
+#include <sequence_pattern.h>
 
 
 ////////////////////////////////////////
@@ -40,10 +40,21 @@ main( int argc, char *argv[] )
 		else
 			path = "foo_001234.tiff";
 
-		auto p = yaco::sequence_pattern( path );
-		std::cout << "Input path: " << path << std::endl;
-		std::cout << "Output pattern: " << p.first << std::endl;
-		std::cout << "Output framenumber: " << p.second << std::endl;
+		yaco::file_sequence_pattern p;
+
+		std::cout << "Examining path: " << path << std::endl;
+
+		int f = p.parse( path );
+
+		std::cout << "Found pattern: " << p.pattern() << std::endl;
+		std::cout << "Output framenumber: " << f << std::endl;
+		std::cout << "Re-substuted name: " << p.substitute( f ) << std::endl;
+
+		yaco::sequence_pattern<char, std::char_traits<char>, yaco::sequence_dollar_var<char>> otherpattern = p;
+
+		std::cout << "Other ($F<N>) pattern: " << otherpattern.pattern() << std::endl;
+		std::cout << "Re-substuted name: " << otherpattern.substitute( f ) << std::endl;
+
 	}
 	catch ( std::exception &e )
 	{
