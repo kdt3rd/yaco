@@ -20,7 +20,7 @@
 // OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#include <math/region>
+#include <math/region.h>
 #include <set>
 #include <list>
 #include <stdexcept>

@@ -26,7 +26,7 @@
 #include <algorithm>
 #include <cctype>
 
-#include "strutil"
+#include "strutil.h"
 
 namespace yaco
 {

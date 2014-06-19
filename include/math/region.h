@@ -28,7 +28,7 @@
 #include <vector>
 #include <iosfwd>
 
-#include "../impl/config"
+#include "../impl/config.h"
 
 namespace yaco
 {

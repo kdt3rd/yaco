@@ -1,9 +1,3 @@
-/// -*- mode: C++ -*-
-///
-/// @file log
-///
-/// @author Kimball Thurston
-
 //
 // Copyright (c) 2012 Kimball Thurston
 //
@@ -28,20 +22,43 @@
 
 #pragma once
 
-#include <locale>
-#include <codecvt>
-
-#include "impl/config"
+#include <mutex>
+#include "impl/config.h"
 
 namespace yaco
 {
 
-template <class charT, class traitsT>
-void
-setup_utf( std::basic_istream<charT, traitsT> &is )
+/// @brief Inverse of std::lock_guard
+///
+/// There are some patterns where you want to have a lock
+/// while some work is set up, unlock to perform the (slow) task,
+/// then re-lock to record said task. That can be accomplished
+/// with the traditional lock_guard, but this can reduce the manual 
+/// scope blocks having to be inserted into the code.
+/// Used just as you would lock_guard, except it unlocks at initialization
+/// and then re-locks at destruction time.
+template <typename Mutex>
+class unlock_guard
 {
+public:
+	typedef Mutex mutex_type;
+
+	_YACO_INLINE explicit unlock_guard( mutex_type &m ) : __m( m ) { __m.unlock(); }
+	_YACO_INLINE unlock_guard( mutex_type &m, std::adopt_lock_t ) : __m( m ) {}
+	_YACO_INLINE ~unlock_guard( void ) { __m.lock(); }
+
+private:
+	unlock_guard( const unlock_guard & ) = delete;
+	unlock_guard &operator=( const unlock_guard & ) = delete;
+
+	mutex_type &__m;
+};
+
 }
 
-} // namespace yaco
 
-
+////////////////////////////////////////
+// Local Variables:
+// mode: C++
+// End:
+// vim:ft=cpp:

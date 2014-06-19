@@ -30,7 +30,8 @@
 #include <iomanip>
 #include <cctype>
 
-#include "impl/fmt_priv"
+#include "impl/config.h"
+#include "impl/fmt_priv.h"
 
 
 ////////////////////////////////////////

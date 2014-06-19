@@ -33,7 +33,7 @@
 #include <type_traits>
 #include <ostream>
 
-#include "impl/fmt_priv"
+#include "impl/fmt_priv.h"
 #include "const_string.h"
 
 namespace yaco

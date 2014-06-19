@@ -22,42 +22,26 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cmath>
+#include <tuple>
+#include <locale>
+#include <sstream>
 
-#include "../_y_config"
+#include "config.h"
 
 namespace yaco
 {
 
-namespace math
+namespace __priv
 {
 
-// hrm. vector4 is really only
-// needed for points (i.e. w == 1)
-// in computer graphics speak
-// should we call them points vs. normals
-// or just vectors in the generic sense?
-class vector3;
-class vector4;
+void log_output( const std::string &msg );
 
-class matrix3;
-class matrix4;
+} // namespace __priv
 
-class point2;
-class point;
-class normal;
-class matrix;
+} // namespace yaco
 
-class quaternion;
 
-// normal + distance
-class plane;
-
-}
-
-}
-
+////////////////////////////////////////
 // Local Variables:
 // mode: C++
 // End:

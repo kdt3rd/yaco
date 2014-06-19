@@ -1,5 +1,11 @@
+/// -*- mode: C++ -*-
+///
+/// @file log
+///
+/// @author Kimball Thurston
+
 //
-// Copyright (c) 2014 Kimball Thurston
+// Copyright (c) 2012 Kimball Thurston
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -22,23 +28,20 @@
 
 #pragma once
 
-#include "impl/config"
+#include <locale>
+#include <codecvt>
+
+#include "impl/config.h"
 
 namespace yaco
 {
 
-namespace file
+template <class charT, class traitsT>
+void
+setup_utf( std::basic_istream<charT, traitsT> &is )
 {
-
-std::string readlink( const std::string &file, const std::string &current );
-
 }
-
 
 } // namespace yaco
 
-// Local Variables:
-// mode: C++
-// End:
-// vim:ft=cpp:
 

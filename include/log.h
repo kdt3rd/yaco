@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "__log"
+#include "impl/log_priv.h"
 
 namespace yaco
 {

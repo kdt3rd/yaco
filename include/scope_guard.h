@@ -24,7 +24,7 @@
 
 #include <functional>
 
-#include "impl/config"
+#include "impl/config.h"
 
 namespace yaco
 {

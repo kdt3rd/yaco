@@ -25,8 +25,8 @@
 #include <cmath>
 #include <type_traits>
 
-#include "vector"
-#include "matrix"
+#include "vector.h"
+#include "matrix.h"
 
 namespace yaco
 {

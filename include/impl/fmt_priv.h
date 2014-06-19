@@ -27,7 +27,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "config"
+#include "config.h"
 
 ////////////////////////////////////////
 

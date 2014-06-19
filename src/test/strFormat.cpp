@@ -20,7 +20,7 @@
 // OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#include <strutil>
+#include <strutil.h>
 #include <iostream>
 
 

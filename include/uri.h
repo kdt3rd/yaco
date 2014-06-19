@@ -25,8 +25,8 @@
 #include <string>
 #include <type_traits>
 
-#include "impl/config"
-#include "strutil"
+#include "impl/config.h"
+#include "strutil.h"
 
 namespace yaco
 {
