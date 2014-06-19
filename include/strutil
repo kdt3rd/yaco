@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2012 Kimball Thurston
+// Copyright (c) 2012-2014 Kimball Thurston
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,10 @@
 #include <stdexcept>
 #include <cstring>
 #include <type_traits>
+#include <ostream>
 
 #include "impl/fmt_priv"
+#include "const_string.h"
 
 namespace yaco
 {
@@ -40,33 +42,6 @@ namespace yaco
 // a collection of string utilities...
 namespace str
 {
-
-template <class charT>
-class conststr
-{
-public:
-	typedef typename std::enable_if<std::is_integral<charT>::value, charT>::type type;
-	template <std::size_t N>
-	constexpr conststr( const type (&s)[N] ) : _str( s ), _sz( N - 1 ) {}
-	constexpr conststr( const type *s, std::size_t N ) : _str( s ), _sz( N - 1 ) {}
-	constexpr conststr( const std::basic_string<type> &s ) : _str( s.data() ), _sz( s.size() ) {}
-	constexpr conststr( const type *s ) : _str( s ), _sz( std::strlen( s ) ) {}
-
-	constexpr const type operator[]( std::size_t i ) const { return _str[i]; }
-	constexpr const type at( std::size_t i ) const { return i <= _sz ? _str[i] : throw std::out_of_range( "conststr access out of range" ); }
-	constexpr std::size_t size( void ) const { return _sz; }
-
-	constexpr const type *begin( void ) const { return _str; }
-	constexpr const type *end( void ) const { return _str + _sz + 1; }
-
-private:
-	conststr( void ) = delete;
-	conststr( const conststr & ) = delete;
-	conststr &operator=( const conststr & ) = delete;
-
-	const type *_str;
-	std::size_t _sz;
-};
 
 // @todo: how to handle different character types and codecvt conversion?
 //
@@ -82,7 +57,7 @@ inline std::basic_string<charT>
 format( const charT (&fmt)[N], const Args&... args )
 {
 	std::basic_stringstream<charT> tmp;
-	__priv::fmt_build( tmp, conststr<charT>( fmt, N ), std::tie(args...) );
+	__priv::fmt_build( tmp, const_string<charT>( fmt, N ), std::tie(args...) );
 	return tmp.str();
 }
 
@@ -91,7 +66,7 @@ inline std::basic_string<charT>
 format( const charT *&fmt, const Args&... args )
 {
 	std::basic_stringstream<charT> tmp;
-	__priv::fmt_build( tmp, conststr<charT>( fmt ), std::tie(args...) );
+	__priv::fmt_build( tmp, const_string<charT>( fmt ), std::tie(args...) );
 	return tmp.str();
 }
 
@@ -108,14 +83,14 @@ template <typename charT, std::size_t N, typename... Args >
 void
 output( std::basic_ostream<charT> &os, const charT (&fmt)[N], const Args&... args )
 {
-	__priv::fmt_build( os, conststr<charT>( fmt, N ), std::tie(args...) );
+	__priv::fmt_build( os, const_string<charT>( fmt, N ), std::tie(args...) );
 }
 
 template <typename charT, typename traitsT, typename... Args >
 void
 output( std::basic_ostream<charT, traitsT> &os, const charT *&fmt, const Args&... args )
 {
-	__priv::fmt_build( os, conststr<charT>( fmt ), std::tie(args...) );
+	__priv::fmt_build( os, const_string<charT>( fmt ), std::tie(args...) );
 }
 
 template <typename charT, class traitsT, class allocTf, typename... Args >
@@ -125,23 +100,24 @@ output( std::basic_ostream<charT, traitsT> &os, const std::basic_string<charT, t
 	__priv::fmt_build( os, fmt, std::tie(args...) );
 }
 
-// split on any of the characters in the separator string
-template <class charT, class traitsT, class allocT>
-std::vector<std::basic_string<charT, traitsT, allocT>>
-split( const std::basic_string<charT, traitsT, allocT> &__str,
-	   const std::basic_string<charT, traitsT, allocT> &__sep,
-	   bool __skip_empty = false )
-{
-	typedef typename std::basic_string<charT, traitsT, allocT> __s_type;
 
-	std::vector< __s_type > __ret;
+////////////////////////////////////////////////////////////////////////////////
+// Utility functions to split on either the individual separator or a set of
+// separator characters
+////////////////////////////////////////////////////////////////////////////////
+
+template <typename stringT>
+inline void
+split( std::vector<stringT> &__ret, const stringT &__str, const stringT &__sep, bool __skip_empty = false )
+{
+	__ret.clear();
 
 	if ( __skip_empty )
 	{
-		typename __s_type::size_type __last = __str.find_first_not_of( __sep, 0 );
-		typename __s_type::size_type __cur = __str.find_first_of( __sep, __last );
+		typename stringT::size_type __last = __str.find_first_not_of( __sep, 0 );
+		typename stringT::size_type __cur = __str.find_first_of( __sep, __last );
 		
-		while ( __cur != __s_type::npos || __last < __str.size() )
+		while ( __cur != stringT::npos || __last < __str.size() )
 		{
 			if ( __cur != __last )
 				__ret.push_back( __str.substr( __last, __cur - __last ) );
@@ -151,15 +127,15 @@ split( const std::basic_string<charT, traitsT, allocT> &__str,
 	}
 	else
 	{
-		typename __s_type::size_type __last = 0;
-		typename __s_type::size_type __cur = __str.find_first_of( __sep, __last );
+		typename stringT::size_type __last = 0;
+		typename stringT::size_type __cur = __str.find_first_of( __sep, __last );
 
 		do
 		{
-			if ( __cur == __s_type::npos )
+			if ( __cur == stringT::npos )
 			{
 				if ( __last == __str.size() )
-					__ret.push_back( __s_type() );
+					__ret.push_back( stringT() );
 				else
 					__ret.push_back( __str.substr( __last ) );
 				break;
@@ -169,37 +145,50 @@ split( const std::basic_string<charT, traitsT, allocT> &__str,
 
 			__last = __cur + 1;
 			__cur = __str.find_first_of( __sep, __last );
-		} while ( __last != __s_type::npos );
+		} while ( __last != stringT::npos );
 	}
+}
 
+template <typename stringT>
+inline void
+split( std::vector<stringT> &__ret, const stringT &__str,
+	   const typename stringT::value_type *__sep,
+	   bool __skip_empty = false )
+{
+	split( __ret, __str, stringT( __sep ), __skip_empty );
+}
+
+template <typename stringT>
+inline std::vector<stringT>
+split( const stringT &__str, const stringT &__sep, bool __skip_empty = false )
+{
+	std::vector<stringT> __ret;
+	split( __ret, __str, __sep, __skip_empty );
 	return __ret;
 }
 
-template <class charT, class traitsT, class allocT>
-std::vector<std::basic_string<charT, traitsT, allocT>>
-split( const std::basic_string<charT, traitsT, allocT> &__str,
-	   const charT *__sep,
+template <typename stringT>
+std::vector<stringT>
+split( const stringT &__str, const typename stringT::value_type *__sep,
 	   bool __skip_empty = false )
 {
-	return split( __str, std::basic_string<charT, traitsT, allocT>( __sep ), __skip_empty );
+	return split( __str, stringT( __sep ), __skip_empty );
 }
 
-template <typename charT, typename traitsT, typename allocT>
-std::vector<std::basic_string<charT, traitsT, allocT>>
-split( const std::basic_string<charT, traitsT, allocT> &__str,
-	   typename traitsT::char_type __sep,
+template <typename stringT>
+inline void
+split( std::vector<stringT> &__ret, const stringT &__str,
+	   typename stringT::value_type __sep,
 	   bool __skip_empty = false )
 {
-	typedef typename std::basic_string<charT, traitsT, allocT> __s_type;
-
-	std::vector< __s_type > __ret;
+	__ret.clear();
 
 	if ( __skip_empty )
 	{
-		typename __s_type::size_type __last = __str.find_first_not_of( __sep, 0 );
-		typename __s_type::size_type __cur = __str.find_first_of( __sep, __last );
+		typename stringT::size_type __last = __str.find_first_not_of( __sep, 0 );
+		typename stringT::size_type __cur = __str.find_first_of( __sep, __last );
 
-		while ( __cur != __s_type::npos || __last < __str.size() )
+		while ( __cur != stringT::npos || __last < __str.size() )
 		{
 			if ( __cur != __last )
 				__ret.push_back( __str.substr( __last, __cur - __last ) );
@@ -209,15 +198,15 @@ split( const std::basic_string<charT, traitsT, allocT> &__str,
 	}
 	else
 	{
-		typename __s_type::size_type __last = 0;
-		typename __s_type::size_type __cur = __str.find_first_of( __sep, __last );
+		typename stringT::size_type __last = 0;
+		typename stringT::size_type __cur = __str.find_first_of( __sep, __last );
 
 		do
 		{
-			if ( __cur == __s_type::npos )
+			if ( __cur == stringT::npos )
 			{
 				if ( __last == __str.size() )
-					__ret.push_back( __s_type() );
+					__ret.push_back( stringT() );
 				else
 					__ret.push_back( __str.substr( __last ) );
 				break;
@@ -227,30 +216,39 @@ split( const std::basic_string<charT, traitsT, allocT> &__str,
 
 			__last = __cur + 1;
 			__cur = __str.find_first_of( __sep, __last );
-		} while ( __last != __s_type::npos );
+		} while ( __last != stringT::npos );
 	}
+}
 
+template <typename stringT>
+std::vector<stringT>
+split( const stringT &__str, typename stringT::value_type __sep,
+	   bool __skip_empty = false )
+{
+	std::vector<stringT> __ret;
+	split( __ret, __str, __sep, __skip_empty );
 	return __ret;
 }
 
-template <typename charT, typename traitsT, typename allocT>
-int
-icompare( const std::basic_string<charT, traitsT, allocT> &__a,
-		  const std::basic_string<charT, traitsT, allocT> &__b )
+template <typename stringT>
+inline int icompare( const stringT &__a, const stringT &__b )
 {
 //	typedef typename std::basic_string<charT, traitsT, allocT> __s_type;
 //	auto &__f = std::use_facet<std::collate<charT>>( std::locale() );
 //  the above facet can be used w/ the transform function to enable
 //	true lexicographical compare, otherwise it'll just be comparing
 //	the lower case versions
+	typedef typename stringT::size_type sz_t;
+	typedef typename stringT::value_type charT;
+	typedef typename stringT::traits_type traitsT;
 
-	std::size_t __lhs = __a.size();
-    std::size_t __rhs = __b.size();
+	sz_t __lhs = __a.size();
+    sz_t __rhs = __b.size();
 	std::locale __l;
 
 	const charT *__aP = __a.data();
 	const charT *__bP = __b.data();
-	for ( std::size_t __n = std::min( __lhs, __rhs ); __n; --__n, ++__aP, ++__bP )
+	for ( sz_t __n = std::min( __lhs, __rhs ); __n; --__n, ++__aP, ++__bP )
 	{
 		charT __aI = std::tolower( *__aP, __l );
 		charT __bI = std::tolower( *__bP, __l );
@@ -269,42 +267,35 @@ icompare( const std::basic_string<charT, traitsT, allocT> &__a,
 	return 0;
 }
 
-template <typename charT, typename traitsT, typename allocT>
-bool
-iless( const std::basic_string<charT, traitsT, allocT> &__a,
-	   const std::basic_string<charT, traitsT, allocT> &__b )
+template <typename stringT>
+inline bool
+iless( const stringT &a, const stringT &b )
 {
-	return icompare( __a, __b ) < 0;
+	return icompare( a, b ) < 0;
 }
 
-template <typename charT, typename traitsT, typename allocT>
-std::basic_string<charT, traitsT, allocT>
-to_lower( const std::basic_string<charT, traitsT, allocT> &__str,
-		  const std::locale &__l)
+template <typename stringT>
+inline stringT to_lower( const stringT &__str, const std::locale &__l )
 {
 	return transform( __str.begin(), __str.end(), __str.begin(),
 					  bind( tolower, std::placeholders::_1, __l ) );
 }
 
-template <typename charT, typename traitsT, typename allocT>
-std::basic_string<charT, traitsT, allocT>
-to_lower( const std::basic_string<charT, traitsT, allocT> &__str )
+template <typename stringT>
+inline stringT to_lower( const stringT &__str )
 {
 	return to_lower( __str, std::locale() );
 }
 
-template <typename charT, typename traitsT, typename allocT>
-std::basic_string<charT, traitsT, allocT>
-to_upper( const std::basic_string<charT, traitsT, allocT> &__str,
-		  const std::locale &__l)
+template <typename stringT>
+inline stringT to_upper( const stringT &__str, const std::locale &__l)
 {
 	return transform( __str.begin(), __str.end(), __str.begin(),
 					  bind( toupper, std::placeholders::_1, __l ) );
 }
 
-template <typename charT, typename traitsT, typename allocT>
-std::basic_string<charT, traitsT, allocT>
-to_upper( const std::basic_string<charT, traitsT, allocT> &__str )
+template <typename stringT>
+inline stringT to_upper( const stringT &__str )
 {
 	return to_upper( __str, std::locale() );
 }
